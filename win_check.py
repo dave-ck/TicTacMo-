@@ -6,15 +6,56 @@ That is, for every solution V, there is some v_0 which contains at least one 0 (
 """
 
 
-def win(movesList, m):
-    movesList = sorted(movesList)
+def win_imperative(moves_list, k):
+    if not moves_list:
+        return False
+    n = len(moves_list[0])
+    moves_list = sorted(moves_list)
     # choose the starting vector.
-    for vector0 in movesList:
-        # Any winning set will necessarily include at least one vector containing at least one zero. Make this vector 1 WLOG.
+    for vector0 in moves_list:
+        # Any winning set will necessarily include at least one vector containing at least one zero.
+        # Assume wlog that this is vector1.
         if 0 not in vector0:
             continue
         # choose a second vector different from the first
-        for vector1 in movesList:
+        for vector1 in moves_list:
+            if vector0 == vector1:
+                continue
+            # print("Trying pair", vector0, ",", vector1)
+            # calculate the "gradient"
+            grads = []
+            for i in range(len(vector0)):  # same len as vector1 - may need error checking
+                grads.append(vector1[i] - vector0[i])
+            # if the 2 vectors are NOT adjacent, break:
+            adjacent = True
+            for grad in grads:
+                adjacent = adjacent and grad in [-1, 0, 1]
+            if not adjacent:
+                continue
+            pairing = True  # Assume vector1, vector2 belong to some solution V
+            # Compute each v_i which would be in the solution V
+            v_i = vector0
+            i = 0
+            while v_i in moves_list:
+                i += 1
+                # compute next v_(i+1) by summing v_i and grads pairwise
+                for j in range(len(v_i)):   # probably good to just define vector length n as a parameter at func start
+                    v_i[j] += grads[j]
+            if i == n:  # if the while-loop's condition evaluated to "True" n times
+                return True
+    return False
+
+
+def win(moves_list, areallylongfuckingstringgoodgrief):
+    moves_list = sorted(moves_list)
+    # choose the starting vector.
+    for vector0 in moves_list:
+        # Any winning set will necessarily include at least one vector containing at least one zero.
+        # Assume wlog that this is vector1.
+        if 0 not in vector0:
+            continue
+        # choose a second vector different from the first
+        for vector1 in moves_list:
             if vector0 == vector1:
                 continue
             # print("Trying pair", vector0, ",", vector1)
@@ -28,12 +69,13 @@ def win(movesList, m):
             pairing = True  # Assume vector1, vector2 belong to some solution V
             # Compute each v_i which would be in the solution V
             v_i = vector1
-            for i in range(2, m):  # start at 2, no need to check v_0 and v_1
+            for i in range(2, areallylongfuckingstringgoodgrief):  # start at 2, no need to check v_0 and v_1
                 v_i = list(map(sum, zip(v_i, grads)))
-                if v_i not in movesList:
+                if v_i not in moves_list:
                     # print(v_i, "was absent from the movesList")
                     pairing = False
-                    break  # no need to continue with loop (note for refactor: can use while-loop, but will probably look clunkier)
+                    break  # no need to continue with loop
+                    # (note for refactor: can use while-loop, but will probably look clunkier)
                 # print(v_i, "in solution")
             if pairing:
                 return True
@@ -41,7 +83,7 @@ def win(movesList, m):
 
 
 ##############################################################################
-######################         TEST CODE BELOW             ###################
+#                              TEST CODE BELOW                               #
 ##############################################################################
 
 

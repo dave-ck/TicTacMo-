@@ -35,7 +35,7 @@ def win_imperative(moves_list, n):
             # Compute each v_i which would be in the solution V
             v_i = vector0[:]
             i = 0
-            while v_i in moves_list and i < 10:
+            while v_i in moves_list:
                 i += 1
                 # compute next v_(i+1) by summing v_i and grads pairwise
                 for j in range(len(v_i)):   # probably good to just define vector length n as a parameter at func start
@@ -85,6 +85,7 @@ def win(moves_list, areallylongfuckingstringgoodgrief):
 #                              TEST CODE BELOW                               #
 ##############################################################################
 
+"""
 
 win_imperativeTest0 = (
     [[1, 0],  # vanilla win, vertical/horizontal
@@ -114,8 +115,11 @@ win_imperativeTestHighDim = (
     3)
 
 win_imperativeTestBigBoard = (
-    [[i, 1] for i in range(20)] + [[i % 7 + 1, i + 2] for i in range(23)] + [[i, 1] for i in range(21, 40)],
+    [[i, 1] for i in range(20)] + [[i % 7 + 1, i + 2] for i in range(23)] + [[i, 1] for i in range(21, 40)] + [[20, 1]],
     40)
+
+
+
 
 loseTest = (
     [[1, 2],
@@ -149,7 +153,7 @@ print("\n")
 print(win_imperative(*win_imperativeTestBigBoard))
 
 
-"""    
+  
 winTest0 = (
     [[1,0], #vanilla win, vertical/horizontal
      [0,0],

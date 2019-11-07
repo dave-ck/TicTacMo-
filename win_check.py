@@ -6,10 +6,10 @@ That is, for every solution V, there is some v_0 which contains at least one 0 (
 """
 
 
-def win_imperative(moves_list, k):
+def win_imperative(moves_list, n):
+    print("Trying {}, {}".format(moves_list, n))
     if not moves_list:
         return False
-    n = len(moves_list[0])
     moves_list = sorted(moves_list)
     # choose the starting vector.
     for vector0 in moves_list:
@@ -32,15 +32,14 @@ def win_imperative(moves_list, k):
                 adjacent = adjacent and grad in [-1, 0, 1]
             if not adjacent:
                 continue
-            pairing = True  # Assume vector1, vector2 belong to some solution V
             # Compute each v_i which would be in the solution V
-            v_i = vector0
+            v_i = vector0[:]
             i = 0
-            while v_i in moves_list:
+            while v_i in moves_list and i < 10:
                 i += 1
                 # compute next v_(i+1) by summing v_i and grads pairwise
                 for j in range(len(v_i)):   # probably good to just define vector length n as a parameter at func start
-                    v_i[j] += grads[j]
+                    v_i[j] += grads[j]      # increment current grid cell by grads
             if i == n:  # if the while-loop's condition evaluated to "True" n times
                 return True
     return False
@@ -85,6 +84,69 @@ def win(moves_list, areallylongfuckingstringgoodgrief):
 ##############################################################################
 #                              TEST CODE BELOW                               #
 ##############################################################################
+
+
+win_imperativeTest0 = (
+    [[1, 0],  # vanilla win, vertical/horizontal
+     [0, 0],
+     [2, 0]],
+    3)
+
+win_imperativeTest1 = (
+    [[1, 1],  # vanilla win, diagonal
+     [0, 0],
+     [2, 2]],
+    3)
+
+win_imperativeTest2 = (
+    [[1, 1],
+     [0, 0],
+     [2, 1],  # spoiler
+     [2, 2]],
+    3)
+
+win_imperativeTestHighDim = (
+    [[1, 1, 2, 2, 1],
+     [0, 0, 1, 1, 1],
+     [2, 1, 1, 1, 0],
+     [2, 2, 2, 2, 0],
+     [2, 0, 0, 0, 0]],
+    3)
+
+win_imperativeTestBigBoard = (
+    [[i, 1] for i in range(20)] + [[i % 7 + 1, i + 2] for i in range(23)] + [[i, 1] for i in range(21, 40)],
+    40)
+
+loseTest = (
+    [[1, 2],
+     [0, 0],
+     [1, 1],
+     [2, 0]],
+    3)
+
+print("win_imperative tests")
+print("\n")
+print(win_imperative(*win_imperativeTest0), "yeet")
+print("\n")
+print(win_imperative(*win_imperativeTest1))
+print("\n")
+print(win_imperative(*win_imperativeTest2))
+print("\n")
+print("\n")
+print("Lose tests")
+print("\n")
+print(win_imperative(*loseTest))
+print("\n")
+print("\n")
+print("5D - win_imperative")
+print("\n")
+print(win_imperative(*win_imperativeTestHighDim))
+
+print("\n")
+print("\n")
+print("High Size, 2D - win_imperative")
+print("\n")
+print(win_imperative(*win_imperativeTestBigBoard))
 
 
 """    

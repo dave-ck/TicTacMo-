@@ -38,21 +38,21 @@ def x_winnable(m, n, movesListO=[], movesListX=[], movesOpen=None, lastPlayed="O
     return winnable
 
 
-def enumerate_moves(m, n):
+def enumerate_moves(n, k):
     # return the n**m possible moves
     # generate from value, converted to base m
     moves = []
-    for val in range(m ** n):
+    for val in range(n ** k):
         move = []
         # write, for i.e. 3 in base 2: 1,1,0,0...
         # first, write the correct representation in base n
         while val > 0:
-            quo = val // m
-            rem = val % m
+            quo = val // n
+            rem = val % n
             move.append(rem)
             val = quo
         # then, append zeroes to grow to size
-        while len(move) < n:
+        while len(move) < k:
             move.append(0)
         # no need to reverse, since we don't care about the order the moves are in
         moves.append(move)

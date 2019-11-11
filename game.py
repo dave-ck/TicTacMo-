@@ -1,4 +1,3 @@
-from win_check import win
 from config import Config
 
 
@@ -43,11 +42,11 @@ class Game:
                 self.winnable = False
                 # no need to execute: self.drawable = True and self.drawable
             else:
-                self.successors.update(config.successors()) # add all of the configuration's successors to the set
+                self.successors.update(config.successors())  # add all of the configuration's successors to the set
         # omitted: identify and eliminate isomorphic boards among successors
         self.configs = self.successors
         self.successors = set()
-        if self.configs:    # if there remain any configurations to expand, then play another turn
+        if self.configs:  # if there remain any configurations to expand, then play another turn
             self.play()
 
     def enumerate_moves(self):  # Cimpl
@@ -70,6 +69,18 @@ class Game:
             moves.append(move)
         return set(moves)
 
-
-classic = Game(2, 3, 2)
-classic.play()
+    def report(self):
+        if not self.computed:
+            print("Game hasn't been computed yet.")
+            return
+        print("""Data return for Hypercube Tic-Tac-Toe, with parameters:
+        n = {n}
+        k = {k}
+        q = {q}
+        "Expert" player = {p_name}
+        "Expert" plays {i}th (0th player first, {qm}th player last)
+        """.format(n=self.n, k=self.k, q=self.q, p_name=self.expert.name(), i=self.i, qm=(self.q-1)))
+        print("\n{p_name} won against every possible strategy!".format(p_name=self.expert.name()))
+        print("\n{p_name} either drew or won against every possible strategy!".format(p_name=self.expert.name()))
+        print("\n{p_name} lost against at least one strategy. This indicates that either {p_name} is bad at the game,"
+              " or the game is winnable for at least one other player".format(p_name=self.expert.name()))

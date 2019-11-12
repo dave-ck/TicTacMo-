@@ -18,7 +18,7 @@ class Game:
         self.expert = expert
         self.i = i
         # initialize set of configurations with just the empty configuration
-        self.configs = {Config(self.n, self.k, self.p, set(), set(), self.enumerate_moves())}
+        self.configs = {Config(self.n, self.k, self.p, [], [], self.enumerate_moves())}
         self.successors = set()
         self.turn = 0
         self.winnable = True  # update with logical ANDs - reflects whether player i can always win with perfect play
@@ -26,9 +26,9 @@ class Game:
         self.computed = False  # flag to signal whether or not the vars winnable and drawable mean anything
 
     def play(self):
-        print("Waddup")
         # for every config
         for config in self.configs:
+            print("Looping in play(); turn {}".format(self.turn))
             if config.win():
                 if self.turn % self.q == self.i:  # if player i made the latest move, i.e. won the game
                     self.winnable = True and self.winnable  # do not overwrite if false
@@ -46,8 +46,11 @@ class Game:
         # omitted: identify and eliminate isomorphic boards among successors
         self.configs = self.successors
         self.successors = set()
+        self.turn += 1
         if self.configs:  # if there remain any configurations to expand, then play another turn
             self.play()
+        else:
+            self.computed = True # if we have exhausted all possibilities, then we can say our game has been computed
 
     def enumerate_moves(self):  # Cimpl
         # return the n**m possible moves
@@ -79,8 +82,11 @@ class Game:
         q = {q}
         "Expert" player = {p_name}
         "Expert" plays {i}th (0th player first, {qm}th player last)
-        """.format(n=self.n, k=self.k, q=self.q, p_name=self.expert.name(), i=self.i, qm=(self.q-1)))
-        print("\n{p_name} won against every possible strategy!".format(p_name=self.expert.name()))
-        print("\n{p_name} either drew or won against every possible strategy!".format(p_name=self.expert.name()))
-        print("\n{p_name} lost against at least one strategy. This indicates that either {p_name} is bad at the game,"
-              " or the game is winnable for at least one other player".format(p_name=self.expert.name()))
+        """.format(n=self.n, k=self.k, q=self.q, p_name=self.expert.name, i=self.i, qm=(self.q-1)))
+        if self.winnable:
+            print("\n{p_name} won against every possible strategy!".format(p_name=self.expert.name))
+        elif self.drawable:
+            print("\n{p_name} either drew or won against every possible strategy!".format(p_name=self.expert.name))
+        else:
+            print("\n{p_name} lost against at least one strategy. This indicates that either {p_name} is bad at the game,"
+              " or the game is winnable for at least one other player".format(p_name=self.expert.name))

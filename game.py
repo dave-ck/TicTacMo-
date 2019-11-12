@@ -70,7 +70,7 @@ class Game:
                 move.append(0)
             # no need to reverse, since we don't care about the order the moves are in
             moves.append(move)
-        return set(moves)
+        return moves
 
     def report(self):
         if not self.computed:

@@ -4,12 +4,11 @@ from player import Player
 
 class Randy(Player):
     def __init__(self, k, n, q):
-        self.__init__(self, k, n, q)
+        super().__init__(k, n, q)
+        self.name = "Randy"
 
-    def move(self, movesO, movesX, xMove=True):
-        # create a random k-vector, not in either set O or X, with each value in the interval [0, n]
-        vector = [random.randint(0, self.n) for i in range(self.k)]
-        if vector not in movesO and vector not in movesX:
-            return vector
-        else:
-            return self.move(movesO, movesX, xMove)
+    def move(self, O, X, E, turn):
+        # picks a random member of E and returns it as the "expert" move
+        move = random.sample(E, 1)[0]
+        print("Randy plays randomly: chooses {} from {}".format(move, E))
+        return move

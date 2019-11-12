@@ -6,7 +6,11 @@ class Player(ABC):
         self.k = k
         self.n = n
         self.q = q
+        self.name = ""
 
     @abstractmethod
-    def move(self, movesO, movesX, xMove=True):
+    def move(self, O, X, E, turn):
         pass
+
+    def name(self):
+        return self.name

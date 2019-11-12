@@ -9,7 +9,7 @@ class Player(ABC):
         self.name = ""
 
     @abstractmethod
-    def move(self, O, X, E, turn):
+    def move(self, O, X, E, turn):  # refactor to take only a "config" object as argument
         pass
 
     def name(self):

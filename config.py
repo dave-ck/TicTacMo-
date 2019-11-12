@@ -3,7 +3,7 @@ from win_check import win
 
 class Config:  # Cimpl entire class as a struct, functions as methods taking the struct as a parameter
 
-    def __init__(self, n, k, p, O, X, E):
+    def __init__(self, n, k, p, O, X, E, turn=0):
         self.name = "Game"
         self.n = n  # number of
         self.k = k  # number of dimensions
@@ -11,7 +11,7 @@ class Config:  # Cimpl entire class as a struct, functions as methods taking the
         self.O = O  # set of O-positions
         self.X = X  # set of X-positions
         self.E = E  # set of empty positions; equal to the set of all moves with O and X removed
-        self.turn = 0  # specific to configuration
+        self.turn = turn  # specific to configuration
         # if expert isn't playing
         # for every possible smove
         # winnable = winnable and winnable(configuration resulting from move)
@@ -21,16 +21,8 @@ class Config:  # Cimpl entire class as a struct, functions as methods taking the
         self.print_2d()
         print("\n\n")
         successors = set()
-        for move in self.E:
-            successor_O = self.O.copy()
-            successor_X = self.X.copy()
-            if self.turn % 2:  # if O is about to move; consider all possible moves for O
-                successor_O.append(move)
-            else:  # X is about to move; consider all possible moves for X
-                successor_X.append(move)
-            successor_E = self.E.copy()
-            successor_E.remove(move)  # mindful of removing list (object) from set...
-            successors.update({Config(self.n, self.k, self.p, successor_O, successor_X, successor_E)})
+        for position in self.E:
+            successors.update({self.move(position)})
         return successors
 
     def win(self):  # may refactor for speed; don't recompute win(X) and win(O) later by return reason why terminal
@@ -39,6 +31,17 @@ class Config:  # Cimpl entire class as a struct, functions as methods taking the
         elif win(self.X, self.n):
             return True
         return False
+
+    def move(self, position):  # return a copy of the config, with the move added
+        successor_O = self.O.copy()
+        successor_X = self.X.copy()
+        if self.turn % 2:  # if O is about to move
+            successor_O.append(position)
+        else:  # X is about to move
+            successor_X.append(position)
+        successor_E = self.E.copy()
+        successor_E.remove(position)  # mindful of removing list (object) from set...
+        return Config(self.n, self.k, self.p, successor_O, successor_X, successor_E, self.turn+1)
 
     def draw(self):
         if len(self.X) + len(self.O) == self.p:
@@ -61,4 +64,4 @@ class Config:  # Cimpl entire class as a struct, functions as methods taking the
         for row in board:
             row = "".join(row)
             print(row)
-        print("_"*self.n)
+        print("_" * self.n)

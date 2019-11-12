@@ -30,19 +30,29 @@ class Game:
         for config in self.configs:
             print("Looping in play(); turn {}".format(self.turn))
             if config.win():
-                if self.turn % self.q == self.i:  # if player i made the latest move, i.e. won the game
+                if (self.turn - 1) % self.q == self.i:  # if player i made the latest move, i.e. won the game
+                    print("Won with position:")
+                    config.print_2d()
                     self.winnable = True and self.winnable  # do not overwrite if false
                     # no need to update self.drawable; if it is at any point False, we interrupt play
                 else:  # player i did not make the latest move; our "expert" failed to play perfectly, or the game is
                     # neither winnable nor drawable with perfect play by player i
+                    print("Lost to position:")
+                    config.print_2d()
                     self.winnable = False
                     self.drawable = False
+                    self.computed = True
                     return
             elif self.turn == self.p:
                 self.winnable = False
                 # no need to execute: self.drawable = True and self.drawable
             else:
-                self.successors.update(config.successors())  # add all of the configuration's successors to the set
+                if self.turn % self.q == self.i:  # it is now player i's turn
+                    player_move = self.expert.move(config.O, config.X, config.E, self.turn)
+                    resulting_config = config.move(player_move)
+                    self.successors.update({resulting_config})
+                else:  # branch to all possible moves by player i's opponents
+                    self.successors.update(config.successors())  # add all of the configuration's successors to the set
         # omitted: identify and eliminate isomorphic boards among successors
         self.configs = self.successors
         self.successors = set()
@@ -50,7 +60,7 @@ class Game:
         if self.configs:  # if there remain any configurations to expand, then play another turn
             self.play()
         else:
-            self.computed = True # if we have exhausted all possibilities, then we can say our game has been computed
+            self.computed = True  # if we have exhausted all possibilities, then we can say our game has been computed
 
     def enumerate_moves(self):  # Cimpl
         # return the n**m possible moves
@@ -82,11 +92,13 @@ class Game:
         q = {q}
         "Expert" player = {p_name}
         "Expert" plays {i}th (0th player first, {qm}th player last)
-        """.format(n=self.n, k=self.k, q=self.q, p_name=self.expert.name, i=self.i, qm=(self.q-1)))
+        """.format(n=self.n, k=self.k, q=self.q, p_name=self.expert.name, i=self.i, qm=(self.q - 1)))
         if self.winnable:
             print("\n{p_name} won against every possible strategy!".format(p_name=self.expert.name))
         elif self.drawable:
             print("\n{p_name} either drew or won against every possible strategy!".format(p_name=self.expert.name))
         else:
-            print("\n{p_name} lost against at least one strategy. This indicates that either {p_name} is bad at the game,"
-              " or the game is winnable for at least one other player".format(p_name=self.expert.name))
+            print(
+                "\n{p_name} lost against at least one strategy. This indicates that either {p_name} is bad at the game,"
+                " or the game is winnable for at least one other player or union of players.".format(
+                    p_name=self.expert.name))

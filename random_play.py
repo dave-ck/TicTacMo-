@@ -7,7 +7,7 @@ class Randy(Player):
         super().__init__(k, n, q)
         self.name = "Randy"
 
-    def move(self, O, X, E, turn):
+    def move(self, O, X, E, turn):  # refactor to take "config" as input
         # picks a random member of E and returns it as the "expert" move
         move = random.sample(E, 1)[0]
         print("Randy plays randomly: chooses {} from {}".format(move, E))

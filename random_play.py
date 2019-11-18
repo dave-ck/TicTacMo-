@@ -12,3 +12,12 @@ class Randy(Player):
         move = random.sample(E, 1)[0]
         print("Randy plays randomly: chooses {} from {}".format(move, E))
         return move
+
+    def reward(self):
+        pass
+
+    def punish(self):
+        pass
+
+    def draw(self):
+        pass

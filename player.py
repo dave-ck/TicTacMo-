@@ -14,3 +14,12 @@ class Player(ABC):
 
     def name(self):
         return self.name
+
+    def reward(self):   # called on game wins
+        pass
+
+    def punish(self):   # called on game losses
+        pass
+
+    def draw(self):     # called on game draws
+        pass

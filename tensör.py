@@ -1,17 +1,16 @@
 import tensorflow as tf
-
-print("TensorFlow version: {}".format(tf.__version__))
-print("Eager execution is: {}".format(tf.executing_eagerly()))
-print("Keras version: {}".format(tf.keras.__version__))
-
-var = tf.Variable([3, 3])
-
-if tf.test.is_gpu_available():
-    print('Running on GPU')
-    print('GPU #0?')
-    print(var.device.endswith('GPU:0'))
-    print(var.device)
-else:
-    print('Running on CPU')
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+tf.debugging.set_log_device_placement(True)
 
 
+print("Set environment variable for CUDA devices, and device debug to True.")
+
+tf.constant(3)
+
+# Place tensors on the CPU
+a = tf.constant([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+b = tf.constant([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
+
+c = tf.matmul(a, b)
+print(c)

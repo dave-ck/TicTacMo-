@@ -17,9 +17,6 @@ class Config:  # Cimpl entire class as a struct, functions as methods taking the
         # winnable = winnable and winnable(configuration resulting from move)
 
     def successors(self):  # Cimpl with isomorphism checks
-        print("At board:")
-        self.print_2d()
-        print("\n\n")
         successors = set()
         for position in self.E:
             successors.update({self.move(position)})

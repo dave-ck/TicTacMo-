@@ -10,14 +10,20 @@ class Randy(Player):
     def move(self, O, X, E, turn):  # refactor to take "config" as input
         # picks a random member of E and returns it as the "expert" move
         move = random.sample(E, 1)[0]
-        print("Randy plays randomly: chooses {} from {}".format(move, E))
+        # print("Randy plays randomly: chooses {} from {}".format(move, E))
         return move
 
-    def reward(self):
-        pass
+    def reward(self, config):
+        print("Win!")
+        config.print_2d()
+        print("\n\n")
 
-    def punish(self):
-        pass
+    def punish(self, config):
+        print("Loss :(")
+        config.print_2d()
+        print("\n\n")
 
-    def draw(self):
-        pass
+    def draw(self, config):
+        print("Draw :/")
+        config.print_2d()
+        print("\n\n")

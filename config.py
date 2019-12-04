@@ -1,4 +1,5 @@
 from win_check import win
+from copy import deepcopy
 
 
 class Config:  # Cimpl entire class as a struct, functions as methods taking the struct as a parameter
@@ -62,3 +63,17 @@ class Config:  # Cimpl entire class as a struct, functions as methods taking the
             row = "".join(row)
             print(row)
         print("_" * self.n)
+
+    def __copy__(self):             # https://stackoverflow.com/a/15774013/12387665
+        cls = self.__class__
+        result = cls.__new__(cls)
+        result.__dict__.update(self.__dict__)
+        return result
+
+    def __deepcopy__(self, memo):   # https://stackoverflow.com/a/15774013/12387665
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            setattr(result, k, deepcopy(v, memo))
+        return result

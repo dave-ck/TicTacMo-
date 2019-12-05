@@ -6,7 +6,7 @@ import numpy as np
 from gym import wrappers
 
 if __name__ == '__main__':
-    env = ttt_env.nkq_game()
+    env = ttt_env.nkq_game(n=3, k=2)
     brain = Agent(gamma=0.99, epsilon=1.0, batch_size=64, n_actions=9,
                   input_dims=[9], alpha=0.003)
 

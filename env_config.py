@@ -31,7 +31,7 @@ class Config:  # Cimpl entire class as a struct, functions as methods taking the
 
     def move(self, position):  # return a copy of the config, with the move added
         if position not in self.E:  # illegal move; does not affect game state and player loses their move
-            print("Illegal move suppressed.")
+            # print("Illegal move suppressed.")
             return
         if self.turn % 2:  # if O is about to move
             self.O.append(position)
@@ -74,6 +74,9 @@ class Config:  # Cimpl entire class as a struct, functions as methods taking the
     def rand_move(self):
         move = random.sample(self.E, 1)[0]
         self.move(move)
+
+    def move_available(self, position):
+        return position in self.E
 
     def __copy__(self):  # https://stackoverflow.com/a/15774013/12387665
         cls = self.__class__

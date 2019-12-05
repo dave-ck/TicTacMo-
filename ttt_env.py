@@ -3,14 +3,13 @@ from env_config import Config
 
 
 class nkq_game(gc.Env):
-    def __init__(self):
-        self.n = 3
-        self.k = 2
+    def __init__(self, n=3, k=2):
+        self.n = n
+        self.k = k
         self.p = self.n ** self.k
         self.config = None
 
     def step(self, action):
-        print("Chose action", action)
         # translate action to a move
         move = []
         info = {}
@@ -22,14 +21,17 @@ class nkq_game(gc.Env):
             # then, append zeroes to grow to size
         while len(move) < self.k:
             move.append(0)
+        illegal_move = self.config.move_available(move) # punish but allow illegal moves
         self.config.move(move)
         # if game is over, return here
         if self.config.draw() or self.config.win():
-            reward = 10
+            reward = 100
             if self.config.win():
-                reward = 25  # don't overincentivize risky play - win > draw by less than loss > win
+                reward = 120  # don't overincentivize risky play - win > draw by less than loss > win
             observation = self.config.to_linear_array()
             done = True
+            if illegal_move:
+                reward -= 20
             return observation, reward, done, info
         else:
             self.config.rand_move()
@@ -39,13 +41,17 @@ class nkq_game(gc.Env):
                 if self.config.win():
                     reward = -100  # punish losses heavily on this board - draw is *always* possible
                 done = True
+                if illegal_move:
+                    reward -= 20
                 return observation, reward, done, info
             reward = 0  # no reward for not finishing the game
             done = False
+            if illegal_move:
+                reward -= 20
             return observation, reward, done, info
 
     def reset(self):
-        self.config = Config(n=3, k=2, p=9, O=[], X=[], E=self.enumerate_moves(), turn=0)
+        self.config = Config(n=self.n, k=self.k, p=self.p, O=[], X=[], E=self.enumerate_moves(), turn=0)
         return self.config.to_linear_array()
 
     def render(self, mode='human'):

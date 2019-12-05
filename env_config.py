@@ -15,9 +15,6 @@ class Config:  # Cimpl entire class as a struct, functions as methods taking the
         self.X = X  # set of X-positions
         self.E = E  # set of empty positions; equal to the set of all moves with O and X removed
         self.turn = turn  # specific to configuration
-        # if expert isn't playing
-        # for every possible smove
-        # winnable = winnable and winnable(configuration resulting from move)
 
     def successors(self):  # Cimpl with isomorphism checks
         successors = set()
@@ -33,15 +30,14 @@ class Config:  # Cimpl entire class as a struct, functions as methods taking the
         return False
 
     def move(self, position):  # return a copy of the config, with the move added
-        successor_O = self.O.copy()
-        successor_X = self.X.copy()
+        if position not in self.E:  # illegal move; does not affect game state and player loses their move
+            print("Illegal move suppressed.")
+            return
         if self.turn % 2:  # if O is about to move
-            successor_O.append(position)
+            self.O.append(position)
         else:  # X is about to move
-            successor_X.append(position)
-        successor_E = self.E.copy()
-        successor_E.remove(position)  # mindful of removing list (object) from set...
-        return Config(self.n, self.k, self.p, successor_O, successor_X, successor_E, self.turn + 1)
+            self.X.append(position)
+        self.E.remove(position)  # mindful of removing list (object) from set...
 
     def draw(self):
         if len(self.X) + len(self.O) == self.p:

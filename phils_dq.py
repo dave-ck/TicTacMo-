@@ -1,3 +1,4 @@
+# https://github.com/philtabor/Youtube-Code-Repository/tree/master/ReinforcementLearning/DeepQLearning
 import time
 import torch as T
 import torch.nn as nn
@@ -95,6 +96,8 @@ class Agent(object):
             q_next = self.Q_eval.forward(new_state_batch).to(self.Q_eval.device)
 
             batch_index = np.arange(self.batch_size, dtype=np.int32)
+            # print(np.shape(action_indices))
+            # print("Type:", str(type(action_indices)))
             action_indices = [int(action_indices[i]) for i in range(len(action_indices))]   # todo: WHY????
             q_target[batch_index, action_indices] = reward_batch + self.GAMMA * T.max(q_next, dim=1)[0] * terminal_batch
 

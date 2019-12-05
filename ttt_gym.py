@@ -1,18 +1,18 @@
 # https://github.com/philtabor/Youtube-Code-Repository/blob/master/ReinforcementLearning/DeepQLearning/simple_dqn_torch.py
-import gym
+import ttt_env
 from phils_dq import DeepQNetwork, Agent
 from phils_utils import plotLearning
 import numpy as np
 from gym import wrappers
 
 if __name__ == '__main__':
-    env = gym.make('CartPole-v0')
-    brain = Agent(gamma=0.99, epsilon=1.0, batch_size=64, n_actions=2,
-                  input_dims=[4], alpha=0.003)
+    env = ttt_env.nkq_game()
+    brain = Agent(gamma=0.99, epsilon=1.0, batch_size=64, n_actions=9,
+                  input_dims=[9], alpha=0.003)
 
     scores = []
     eps_history = []
-    num_games = 25
+    num_games = 500
     score = 0
     # uncomment the line below to record every episode.
     #env = wrappers.Monitor(env, "tmp/space-invaders-1",

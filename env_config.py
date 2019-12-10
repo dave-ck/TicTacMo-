@@ -38,6 +38,7 @@ class Config:  # Cimpl entire class as a struct, functions as methods taking the
         else:  # X is about to move
             self.X.append(position)
         self.E.remove(position)  # mindful of removing list (object) from set...
+        self.turn += 1
 
     def draw(self):
         if len(self.X) + len(self.O) == self.p:
@@ -49,18 +50,21 @@ class Config:  # Cimpl entire class as a struct, functions as methods taking the
             print("Can't print a game with k != 2!")
             return
         # construct a 2D array, then print nicely
-        board = [[" " for _ in range(self.n)] for _ in range(self.n)]
+        board = [["  " for _ in range(self.n)] for _ in range(self.n)]
         for x in self.O:
             x, y = x[0], x[1]
-            board[y][x] = "O"
+            board[y][x] = "O "
         for x in self.X:
             a, b = x[0], x[1]
-            board[b][a] = "X"
+            board[b][a] = "X "
         # print nicely
+        row_num = 0
+        print("  " + "".join(list(str(i) + " " for i in range(self.n))))
         for row in board:
-            row = "".join(row)
+            row = str(row_num) + " " + "".join(row) + str(row_num)
+            row_num += 1
             print(row)
-        print("_" * self.n)
+        print("  " + "".join(list(str(i) + " " for i in range(self.n))))
 
     def to_linear_array(self):
         # -1 indicates an X, 0 indicates empty, 1 indicates an O
@@ -91,3 +95,6 @@ class Config:  # Cimpl entire class as a struct, functions as methods taking the
         for k, v in self.__dict__.items():
             setattr(result, k, deepcopy(v, memo))
         return result
+
+# c = Config(3,2,3**2, [], [], [[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2], [2, 0], [2, 1], [2, 2]])
+# for testing

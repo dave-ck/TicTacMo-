@@ -12,26 +12,29 @@ if __name__ == '__main__':
 
     scores = []
     eps_history = []
-    num_games = 500
+    num_games = 2000
     score = 0
     # uncomment the line below to record every episode.
-    #env = wrappers.Monitor(env, "tmp/space-invaders-1",
-    #video_callable=lambda episode_id: True, force=True)
+    # env = wrappers.Monitor(env, "tmp/space-invaders-1",
+    # video_callable=lambda episode_id: True, force=True)
     for i in range(num_games):
         if i % 10 == 0 and i > 0:
-            avg_score = np.mean(scores[max(0, i-10):(i+1)])
-            print('episode: ', i,'score: ', score,
-                 ' average score %.3f' % avg_score,
-                'epsilon %.3f' % brain.EPSILON)
+            avg_score = np.mean(scores[max(0, i - 10):(i + 1)])
+            print('episode: ', i, 'score: ', score,
+                  ' average score %.3f' % avg_score,
+                  'epsilon %.3f' % brain.EPSILON)
         else:
-            print('episode: ', i,'score: ', score)
+            print('episode: ', i, 'score: ', score)
+        display_board = False
+        if i % 100 == 0 and i > 0:
+            display_board = True
         eps_history.append(brain.EPSILON)
         done = False
         observation = env.reset()
         score = 0
         while not done:
             action = brain.chooseAction(observation)
-            observation_, reward, done, info = env.step(action)
+            observation_, reward, done, info = env.step(action, display_board)
             score += reward
             brain.storeTransition(observation, action, reward, observation_,
                                   done)
@@ -40,8 +43,8 @@ if __name__ == '__main__':
 
         scores.append(score)
 
-    x = [i+1 for i in range(num_games)]
-    filename = str(num_games) + 'Games' + 'Gamma' + str(brain.GAMMA) + \
+    x = [i + 1 for i in range(num_games)]
+    filename = str(env.n) + "n" + str(env.k) + "k" + str(num_games) + 'Games' + 'Gamma' + str(brain.GAMMA) + \
                'Alpha' + str(brain.ALPHA) + 'Memory' + \
-                str(brain.Q_eval.fc1_dims) + '-' + str(brain.Q_eval.fc2_dims) +'.png'
+               str(brain.Q_eval.fc1_dims) + '-' + str(brain.Q_eval.fc2_dims) + '.png'
     plotLearning(x, scores, eps_history, filename)

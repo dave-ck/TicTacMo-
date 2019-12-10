@@ -46,7 +46,7 @@ class Agent(object):
         self.batch_size = batch_size
         self.mem_cntr = 0
         self.Q_eval = DeepQNetwork(alpha, n_actions=self.n_actions,
-                                   input_dims=input_dims, fc1_dims=256, fc2_dims=256)
+                                   input_dims=input_dims, fc1_dims=1024, fc2_dims=1024)
         self.state_memory = np.zeros((self.mem_size, *input_dims))
         self.new_state_memory = np.zeros((self.mem_size, *input_dims))
         self.action_memory = np.zeros((self.mem_size, self.n_actions),
@@ -69,9 +69,12 @@ class Agent(object):
         rand = np.random.random()
         actions = self.Q_eval.forward(observation)
         if rand > self.EPSILON:
+            taken = np.vectorize(bool)(observation)
+            actions = actions.masked_fill(T.tensor(taken, device=self.Q_eval.device), -np.inf)
             action = T.argmax(actions).item()
         else:
-            action = np.random.choice(self.action_space)
+            options = np.where(observation == 0)[0]
+            action = np.random.choice(options)  # choose a random empty cell
         return action
 
     def learn(self):
@@ -97,8 +100,9 @@ class Agent(object):
 
             batch_index = np.arange(self.batch_size, dtype=np.int32)
             # print(np.shape(action_indices))
+            # print(action_indices)
             # print("Type:", str(type(action_indices)))
-            action_indices = [int(action_indices[i]) for i in range(len(action_indices))]   # todo: WHY????
+            action_indices = [int(action_indices[i]) for i in range(len(action_indices))]  # todo: WHY????
             q_target[batch_index, action_indices] = reward_batch + self.GAMMA * T.max(q_next, dim=1)[0] * terminal_batch
 
             self.EPSILON = self.EPSILON * self.EPS_DEC if self.EPSILON > self.EPS_MIN else self.EPS_MIN

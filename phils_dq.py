@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
-
+from test import check_nan
 
 class DeepQNetwork(nn.Module):
     def __init__(self, ALPHA, input_dims, fc1_dims, fc2_dims,
@@ -24,12 +24,15 @@ class DeepQNetwork(nn.Module):
         self.to(self.device)
 
     def forward(self, observation):
+        check_nan(observation)
         state = T.Tensor(observation).to(self.device)
         # observation = observation.view(-1)
         x = F.relu(self.fc1(state))
         x = F.relu(self.fc2(x))
         actions = self.fc3(x)
+        check_nan(actions)
         return actions
+
 
 
 class Agent(object):
@@ -46,7 +49,7 @@ class Agent(object):
         self.batch_size = batch_size
         self.mem_cntr = 0
         self.Q_eval = DeepQNetwork(alpha, n_actions=self.n_actions,
-                                   input_dims=input_dims, fc1_dims=1024, fc2_dims=1024)
+                                   input_dims=input_dims, fc1_dims=512, fc2_dims=512)
         self.state_memory = np.zeros((self.mem_size, *input_dims))
         self.new_state_memory = np.zeros((self.mem_size, *input_dims))
         self.action_memory = np.zeros((self.mem_size, self.n_actions),
@@ -67,8 +70,8 @@ class Agent(object):
 
     def chooseAction(self, observation):
         rand = np.random.random()
-        actions = self.Q_eval.forward(observation)
         if rand > self.EPSILON:
+            actions = self.Q_eval.forward(observation)
             taken = np.vectorize(bool)(observation)
             actions = actions.masked_fill(T.tensor(taken, device=self.Q_eval.device), -np.inf)
             action = T.argmax(actions).item()
@@ -99,9 +102,6 @@ class Agent(object):
             q_next = self.Q_eval.forward(new_state_batch).to(self.Q_eval.device)
 
             batch_index = np.arange(self.batch_size, dtype=np.int32)
-            # print(np.shape(action_indices))
-            # print(action_indices)
-            # print("Type:", str(type(action_indices)))
             action_indices = [int(action_indices[i]) for i in range(len(action_indices))]  # todo: WHY????
             q_target[batch_index, action_indices] = reward_batch + self.GAMMA * T.max(q_next, dim=1)[0] * terminal_batch
 

@@ -4,6 +4,9 @@ from win_check import win
 from copy import deepcopy
 
 
+# todo: double-check reward function is working correctly
+
+
 class Config:  # Cimpl entire class as a struct, functions as methods taking the struct as a parameter
 
     def __init__(self, n, k, p, O, X, E, turn=0):
@@ -15,6 +18,28 @@ class Config:  # Cimpl entire class as a struct, functions as methods taking the
         self.X = X  # set of X-positions
         self.E = E  # set of empty positions; equal to the set of all moves with O and X removed
         self.turn = turn  # specific to configuration
+
+    def reward(self, q, win_forcer=-1):
+        """
+        Generate rewards for each player in the game at current time. Punishes players who can force a win for drawing.
+        Punishes players who can force a draw for losing.
+        :param q: the total number of players
+        :param win_forcer: number of the player who can force a win, or -1 if no such player
+        :return: a dictionary {player_number: reward}
+        """
+        latest_player = (self.turn-1) % q
+        if win(self.X, self.n) or win(self.O, self.n):
+            rewards = {i: -1 for i in range(q)}  # heavy punishment for losing; if inevitable, doesn't matter
+            if win_forcer in range(q):
+                rewards[win_forcer] *= 2  # punish the win forcer more if they lost
+            rewards[latest_player] = 1  # reward the winner
+        elif self.draw():
+            rewards = {i: 0 for i in range(q)}
+            if win_forcer in range(q):
+                rewards[win_forcer] = -10
+        else:
+            rewards = {i: 0 for i in range(q)}  # should not need to be called, but may be
+        return rewards
 
     def successors(self):  # Cimpl with isomorphism checks
         successors = set()
@@ -96,5 +121,13 @@ class Config:  # Cimpl entire class as a struct, functions as methods taking the
             setattr(result, k, deepcopy(v, memo))
         return result
 
-# c = Config(3,2,3**2, [], [], [[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2], [2, 0], [2, 1], [2, 2]])
-# for testing
+#
+# c = Config(3, 2, 3 ** 2, [], [], [[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2], [2, 0], [2, 1], [2, 2]])
+# # for testing
+# c.move([1, 2])
+# c.move([2, 0])
+# c.move([1, 1])
+# c.move([2, 1])
+# c.move([1, 0])
+# c.print_2d()
+# print(c.reward(2))

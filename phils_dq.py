@@ -15,6 +15,7 @@ class DeepQNetwork(nn.Module):
         self.fc1_dims = fc1_dims
         self.fc2_dims = fc2_dims
         self.n_actions = n_actions
+        self.alpha = ALPHA
         self.fc1 = nn.Linear(*self.input_dims, self.fc1_dims)
         self.fc2 = nn.Linear(self.fc1_dims, self.fc2_dims)
         self.fc3 = nn.Linear(self.fc2_dims, self.n_actions)
@@ -110,3 +111,36 @@ class Agent(object):
             loss = self.Q_eval.loss(q_target, q_eval).to(self.Q_eval.device)
             loss.backward()
             self.Q_eval.optimizer.step()
+
+    def save_model(self, path):
+        T.save(self.Q_eval.state_dict(), path)
+        print("Saved model to", path)
+
+
+class TF_Player(object):
+    def __init__(self, path):
+        def get_param(path, param):
+            p2 = path[path.index(param) + len(param):]
+            p3 = p2[:p2.index("_")]
+            return p3
+        player_num = int(get_param(path, "p"))
+        q = int(get_param(path, "q"))
+        n = int(get_param(path, "n"))
+        k = int(get_param(path, "k"))
+        n_actions = n ** k
+        input_dims = [n_actions]
+        fc1_dims = int(get_param(path, "fc1"))
+        fc2_dims = int(get_param(path, "fc2"))
+        alpha = float(get_param(path, "alpha"))
+        self.Q_eval = DeepQNetwork(alpha, n_actions=n_actions,
+                                   input_dims=input_dims, fc1_dims=fc1_dims, fc2_dims=fc2_dims)
+        self.Q_eval.load_state_dict(T.load(path))
+        self.Q_eval.eval()
+        print("Initialized from saved TF model.")
+
+    def chooseAction(self, observation):
+        actions = self.Q_eval.forward(observation)
+        taken = np.vectorize(bool)(observation)
+        actions = actions.masked_fill(T.tensor(taken, device=self.Q_eval.device), -np.inf)
+        action = T.argmax(actions).item()
+        return action

@@ -18,8 +18,8 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
 
     @classmethod
     def blank_board(cls, n, k):
-        num_pos = n**k
-        E = [] # the set of empty moves needs to contain every possible move
+        num_pos = n ** k
+        E = []  # the set of empty moves needs to contain every possible move
         for val in range(num_pos):
             move = []
             # write, for i.e. 3 in base 2: 1,1,0,0...
@@ -53,6 +53,35 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
             return True
         return False
 
+    def reward(self, q, win_forcer=-1):
+        """
+        Generate rewards for each player in the game at current time. Punishes players who can force a win for drawing.
+        Punishes players who can force a draw for losing.
+        :param q: the total number of players
+        :param win_forcer: number of the player who can force a win, or -1 if no such player
+        :return: a dictionary {player_number: reward}
+        """
+        latest_player = (self.turn - 1) % q
+        if win(self.X, self.n) or win(self.O, self.n):
+            # heaviest punishment is for losses close to the beginning
+            # i.e. losing after 5 turns on a 3*3 board: reward of -9-1+5=-5
+            # i.e. losing after 9 turns on a 3*3 board: reward of -9-1+9=-1
+            # i.e. winning after 5 turns on a 3*3 board: reward of 9+1-5= 5
+            # i.e. winning after 9 turns on a 3*3 board: reward of 9+1-9= 1
+            rewards = {i: (-1 * self.p) - 1 + self.turn for i in
+                       range(q)}  # heavy punishment for losing; if inevitable, doesn't matter
+            if win_forcer != -1:
+                rewards[win_forcer] *= 2  # punish the win forcer more if they lost
+            rewards[latest_player] = self.p + 1 - self.turn  # reward the winner
+        elif self.draw():
+            rewards = {i: 0 for i in range(q)}
+            if win_forcer in range(q):
+                # draw is always at the last move; function of self.p to keep relevant with large p
+                rewards[win_forcer] = self.p * -0.5
+        else:
+            rewards = {i: 0 for i in range(q)}  # should not need to be called, but may be
+        return rewards
+
     def move(self, position):  # return a copy of the config, with the move added
         if position not in self.E:  # illegal move; does not affect game state and player loses their move
             # print("Illegal move suppressed.")
@@ -73,7 +102,6 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
         clone_board = deepcopy(self)
         clone_board.move(position)
         return clone_board
-
 
     def draw(self):
         if len(self.X) + len(self.O) == self.num_pos:

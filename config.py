@@ -15,9 +15,6 @@ class Config:  # Cimpl entire class as a struct, functions as methods taking the
         self.X = X  # set of X-positions
         self.E = E  # set of empty positions; equal to the set of all moves with O and X removed
         self.turn = turn  # specific to configuration
-        # if expert isn't playing
-        # for every possible smove
-        # winnable = winnable and winnable(configuration resulting from move)
 
     def successors(self):  # Cimpl with isomorphism checks
         successors = set()

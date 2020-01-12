@@ -49,7 +49,7 @@ class Agent(object):
         self.batch_size = batch_size
         self.mem_cntr = 0
         self.Q_eval = DeepQNetwork(alpha, n_actions=self.n_actions,
-                                   input_dims=input_dims, fc1_dims=512, fc2_dims=512)
+                                   input_dims=input_dims, fc1_dims=2048, fc2_dims=2048)
         self.state_memory = np.zeros((self.mem_size, *input_dims))
         self.new_state_memory = np.zeros((self.mem_size, *input_dims))
         self.action_memory = np.zeros((self.mem_size, self.n_actions),

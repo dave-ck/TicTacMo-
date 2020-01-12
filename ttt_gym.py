@@ -35,7 +35,7 @@ def play_brains(n, k, q=2, gamma=0.99, epsilon=1.0, alpha=0.003, num_games=1000)
             # print('episode: ', i, 'scores: ', scores)
             pass
         display_board = False
-        if i % 100 == 0 and i > 0:
+        if i % 100 == 99 and i > 0:
             display_board = True
         eps_history.append(brains[0].EPSILON)
         done = False
@@ -133,4 +133,4 @@ def old_gym():
 # todo: what does alpha do?
 # todo: what does gamma do?
 # todo: make fc1 and fc2 dims passable as parameters. experiment with having an fc3
-play_brains(3, 2, num_games=5000, epsilon=1.0, gamma=.99, alpha=0.003)
+play_brains(3, 2, num_games=50000, epsilon=1.0, gamma=.999, alpha=0.003)

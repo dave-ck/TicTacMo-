@@ -27,16 +27,23 @@ class Config:  # Cimpl entire class as a struct, functions as methods taking the
         :param win_forcer: number of the player who can force a win, or -1 if no such player
         :return: a dictionary {player_number: reward}
         """
-        latest_player = (self.turn-1) % q
+        latest_player = (self.turn - 1) % q
         if win(self.X, self.n) or win(self.O, self.n):
-            rewards = {i: -1 for i in range(q)}  # heavy punishment for losing; if inevitable, doesn't matter
-            if win_forcer in range(q):
+            # heaviest punishment is for losses close to the beginning
+            # i.e. losing after 5 turns on a 3*3 board: reward of -9-1+5=-5
+            # i.e. losing after 9 turns on a 3*3 board: reward of -9-1+9=-1
+            # i.e. winning after 5 turns on a 3*3 board: reward of 9+1-5= 5
+            # i.e. winning after 9 turns on a 3*3 board: reward of 9+1-9= 1
+            rewards = {i: (-1 * self.p) - 1 + self.turn for i in
+                       range(q)}  # heavy punishment for losing; if inevitable, doesn't matter
+            if win_forcer != -1:
                 rewards[win_forcer] *= 2  # punish the win forcer more if they lost
-            rewards[latest_player] = 1  # reward the winner
+            rewards[latest_player] = self.p + 1 - self.turn  # reward the winner
         elif self.draw():
             rewards = {i: 0 for i in range(q)}
             if win_forcer in range(q):
-                rewards[win_forcer] = -10
+                # draw is always at the last move; function of self.p to keep relevant with large p
+                rewards[win_forcer] = self.p * -0.5
         else:
             rewards = {i: 0 for i in range(q)}  # should not need to be called, but may be
         return rewards

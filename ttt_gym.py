@@ -55,4 +55,4 @@ def play(num_games):
     brain.save_model(modelname)
 
 
-play(200)
+play(5000)

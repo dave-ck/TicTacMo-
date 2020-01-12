@@ -1,4 +1,4 @@
-from config import Config
+from board import Board
 
 
 class Game:
@@ -18,7 +18,7 @@ class Game:
         self.p = n ** k  # precompute for speed
         self.players = players[:q] + [None] * (q - len(players))
         # initialize set of configurations with just the empty configuration
-        self.configs = {Config(self.n, self.k, self.p, [], [], self.enumerate_moves())}
+        self.boards = {Board.blank_board(self.n, self.k)}
         self.successors = set()
         self.turn = 0
         self.leaf_count = 0  # keep track of total games ended
@@ -27,9 +27,10 @@ class Game:
 
     def play(self):
         # for every config
-        print("Looping in play(); turn {}; {} configs at present".format(self.turn, len(self.configs)))
-        for config in self.configs:
-            if config.win():
+        print("Looping in play(); turn {}; {} configs at present".format(self.turn, len(self.boards)))
+        for board in self.boards:
+            board.print_2d()
+            if board.win():
                 # statistic tracking
                 self.leaf_count += 1
                 self.player_wins[(self.turn - 1) % self.q] += 1
@@ -38,12 +39,12 @@ class Game:
                 losers = self.players[:]
                 losers.remove(winner)
                 if winner:
-                    winner.reward(config)
+                    winner.reward(board)
                 perfect_loser = True  # flag to see if the victory was against perfect play
                 for loser in losers:
                     if loser:
                         perfect_loser = False  # if any losing player was deterministic, we have proven nothing
-                        loser.punish(config)
+                        loser.punish(board)
                 if perfect_loser and winner:  # if a single winning strategy exists against perfect play
                     pass  # placeholder; need significant reward for Player
             elif self.turn == self.p:  # board is full; number of turns elapsed == total number of positions
@@ -53,22 +54,22 @@ class Game:
                     perfect_draw = -1
                     if player:
                         perfect_draw += 1
-                        player.draw(config)
+                        player.draw(board)
                     if perfect_draw:
                         pass  # placeholder; reward Player
             else:
                 player = self.players[self.turn % self.q]
                 if player:
-                    player_move = player.move(config.O, config.X, config.E, self.turn)
-                    resulting_config = config.move(player_move)
+                    player_move = player.move(board.O, board.X, board.E, self.turn)
+                    resulting_config = board.move_clone(player_move)
                     self.successors.update({resulting_config})
                 else:  # branch to all possible moves
-                    self.successors.update(config.successors())  # add all of the configuration's successors to the set
+                    self.successors.update(board.successors())  # add all of the configuration's successors to the set
         # omitted: identify and eliminate isomorphic boards among successors
-        self.configs = self.successors
+        self.boards = self.successors
         self.successors = set()
         self.turn += 1
-        if self.configs:  # if there remain any configurations to expand, then play another turn
+        if self.boards:  # if there remain any configurations to expand, then play another turn
             self.play()
         else:
             print("Exhausted all configurations.")
@@ -87,23 +88,3 @@ class Game:
                                                                    self.leaf_count - self.draw_count - self.player_wins[
                                                                        i]))
             # also include print statement to specify whether category membership for values k, n, q has been proven
-
-    def enumerate_moves(self):  # Cimpl
-        # return the n**m possible moves
-        # generate from value, converted to base m
-        moves = []
-        for val in range(self.p):
-            move = []
-            # write, for i.e. 3 in base 2: 1,1,0,0...
-            # first, write the correct representation in base n
-            while val > 0:
-                quo = val // self.n
-                rem = val % self.n
-                move.append(rem)
-                val = quo
-            # then, append zeroes to grow to size
-            while len(move) < self.k:
-                move.append(0)
-            # no need to reverse, since we don't care about the order the moves are in
-            moves.append(move)
-        return moves

@@ -36,6 +36,14 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
             E.append(move)
         return cls(n, k, num_pos, [], [], E, 0)
 
+    def reset(self):
+        self.turn = 0
+        # may be faster to produce blank board from scratch depending on Cimpl (or maintain set of all moves in mem)
+        self.E.extend(self.O)
+        self.E.extend(self.X)
+        self.X = []
+        self.O = []
+
     def successors(self):  # Cimpl with isomorphism checks
         """
         Produces all possible successors of the Board configuration (which are 1 move away). Does not reduce these.
@@ -46,6 +54,7 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
             successors.update({self.move_clone(position)})
         return successors
 
+    # consider refactoring to only consider whether the *last* move is a part of a win
     def win(self):  # may refactor for speed; don't recompute win(X) and win(O) later by return reason why terminal
         if win(self.O, self.n):
             return True
@@ -53,10 +62,12 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
             return True
         return False
 
-    def reward(self, q, win_forcer=-1):
+    # todo: rework reward function to return int instead of dict
+    def reward(self, player, q, win_forcer=-1):
         """
-        Generate rewards for each player in the game at current time. Punishes players who can force a win for drawing.
-        Punishes players who can force a draw for losing.
+        Generate a reward for the player in a q-player game based on how "desirable" the current configuration is to
+        that player.
+        :param player: the player's number - 0 for the 1st player.
         :param q: the total number of players
         :param win_forcer: number of the player who can force a win, or -1 if no such player
         :return: a dictionary {player_number: reward}

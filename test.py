@@ -1,7 +1,7 @@
 import numpy as np
 import torch as T
 
-
+print("A commit - this needs reverting.")
 def check_nan(tensor_or_array):
     if type(tensor_or_array) is np.ndarray:
         if np.isnan(tensor_or_array).any():

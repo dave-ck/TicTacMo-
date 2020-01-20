@@ -37,7 +37,7 @@ class nkq_game(gc.Env):
             self.board.print_2d()
         # if game is over, return here
         if self.board.draw() or self.board.win():
-            reward = -10   # against random play, penalize draws
+            reward = 20   # against random play, penalize draws
             if self.board.win():
                 reward = 120  # don't overincentivize risky play - win > draw by less than loss > win
             observation = self.board.to_linear_array()
@@ -51,7 +51,7 @@ class nkq_game(gc.Env):
             observation = self.board.to_linear_array()
             if self.board.draw():
                 done = True
-                reward = -10    # against random play, penalize draws
+                reward = 20    # against random play, penalize draws
                 return observation, reward, done, info
             if self.board.win():
                 reward = -100  # punish losses heavily on this board - draw is *always* possible

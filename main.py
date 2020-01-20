@@ -1,6 +1,6 @@
 from board import Board
 from game import Game
-from random_play import Randy
+from player import Randy
 from phils_dq import TF_Player, Agent
 from phils_utils import plotLearning
 

@@ -7,9 +7,9 @@ from gym import wrappers
 
 
 def play(num_games):
-    env = ttt_env.nkq_game(n=3, k=2)
-    brain = Agent(gamma=0.99, epsilon=1.0, batch_size=64, n_actions=9,
-                  input_dims=[9], alpha=0.003)
+    env = ttt_env.nkq_game(n=5, k=2)
+    brain = Agent(gamma=0.99, epsilon=1.0, batch_size=64, n_actions=25,
+                  input_dims=[25], alpha=0.003, eps_end=0.001, eps_dec=0.999)
 
     scores = []
     eps_history = []
@@ -55,4 +55,4 @@ def play(num_games):
     brain.save_model(modelname)
 
 
-play(5000)
+play(7504)

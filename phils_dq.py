@@ -5,7 +5,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
-from test import check_nan
 
 class DeepQNetwork(nn.Module):
     def __init__(self, ALPHA, input_dims, fc1_dims, fc2_dims,
@@ -144,3 +143,13 @@ class TF_Player(object):
         actions = actions.masked_fill(T.tensor(taken, device=self.Q_eval.device), -np.inf)
         action = T.argmax(actions).item()
         return action
+
+def check_nan(tensor_or_array):
+    if type(tensor_or_array) is np.ndarray:
+        if np.isnan(tensor_or_array).any():
+            raise ValueError("NDArray contains nan:", tensor_or_array)
+    elif type(tensor_or_array) is T.Tensor:
+        if T.isnan(tensor_or_array).any():
+            raise ValueError("Tensor contains nan:", tensor_or_array)
+    else:
+        raise ValueError("Not Tensor or Array:", tensor_or_array)

@@ -1,9 +1,11 @@
 #include <stdio.h>
-#include <math.h>
+#include <math.h> 
 
 int k = 0;
 int n = 0;
 int len = 0;
+
+
 
 void init_vars(int k_, int n_){
     k = k_;

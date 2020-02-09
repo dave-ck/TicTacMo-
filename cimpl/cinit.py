@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def generate_lines(n, k):
     num_pos = n ** k
     moves = []  # the set of empty moves needs to contain every possible move
@@ -42,22 +43,40 @@ def generate_lines(n, k):
             # check if line generated is entirely inside the board
             # i.e. [0,3] and [1,4] as starting point on a 5^2 board, would produce a line that extends outside board
             valid = True
-            for i in line[-1]: # need only check the end of the line - set of moves in board is convex
-                if i < 0 or i > n-1: # if outside board on any of the coords
+            for i in line[-1]:  # need only check the end of the line - set of moves in board is convex
+                if i < 0 or i > n - 1:  # if outside board on any of the coords
                     valid = False
             if valid:
                 lines.append(line)
     # eliminate duplicates
     lines = list(map(lambda x: sorted(x), lines))  # represent lines in sorted order
     unique_lines = []
+    flattened_lines = []
     for line in lines:
         if line in unique_lines:
             continue
         unique_lines.append(line)
-    return unique_lines
+        flattened_lines.append(flatten_line(line, n))
+    ret = np.array(flattened_lines)
+    return ret
 
 
-print(np.array(generate_lines(2, 2)))
-print(np.array(generate_lines(3, 2)))
-print(np.array(generate_lines(3, 3)))
+def flatten(point, n):
+    total = 0
+    for i in range(len(point)):
+        total += point[i]*n**i
+    return total
 
+
+def flatten_line(line, n):
+    return list(map(lambda x: flatten(x, n), line))
+
+
+print(flatten_line([[0, 0], [0, 1]], 2))
+print(flatten_line([[0, 0], [0, 1]], 3))
+print(flatten_line([[0, 0], [1, 1], [2, 2]], 3))
+print(flatten_line([[0, 0], [1, 0], [2, 0]], 3))
+
+print(generate_lines(2, 2))
+print(generate_lines(3, 2))
+print(generate_lines(3, 3))

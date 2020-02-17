@@ -1,4 +1,5 @@
-from board import Board
+from board_naive import Board
+import time
 
 
 class Game:
@@ -24,12 +25,15 @@ class Game:
         self.leaf_count = 0  # keep track of total games ended
         self.draw_count = 0  # keep track of total draws to save computing through summation/subtraction at end
         self.player_wins = {i: 0 for i in range(q)}  # keep track of how many wins each player (play position) has
+        self.initTime = time.time()
+        print("\n\nBegan processing board with n={}, k={}, q={}".format(self.n, self.k, self.q))
 
     def play(self):
         # for every config
-        print("Looping in play(); turn {}; {} configs at present".format(self.turn, len(self.boards)))
+        print("Looping in play(); {}s since init; turn {}; {} configs at present".format(time.time() - self.initTime,
+                                                                                         self.turn, len(self.boards)))
         for board in self.boards:
-            board.print_2d()
+            # board.print_2d()
             if board.win():
                 # statistic tracking
                 self.leaf_count += 1
@@ -72,7 +76,7 @@ class Game:
         if self.boards:  # if there remain any configurations to expand, then play another turn
             self.play()
         else:
-            print("Exhausted all configurations.")
+            print("Exhausted all configurations; {}s since init.".format(time.time()-self.initTime))
             print("Leaf count: {}".format(self.leaf_count))
             print("Draw count: {}".format(self.draw_count))
             for i in range(self.q):

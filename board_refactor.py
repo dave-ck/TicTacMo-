@@ -33,15 +33,15 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
         successors = set()
         for index in range(self.num_pos):
             if self.positions[index] == 0:
-                successors.update({self.move_clone(self.positions[index])})
+                successors.update({self.move_clone(index)})
         return successors
 
     # consider refactoring to only consider whether the *last* move is a part of a win
-    def win(self, player):
+    def win(self, symbol):
         for line in self.lines:
             line_win = True
             for index in line:
-                line_win = line_win and self.positions[index] == player
+                line_win = line_win and self.positions[index] == symbol
             if line_win:
                 return True
         return False
@@ -206,8 +206,11 @@ b.print_2d()
 print(b.lines)
 print(b.positions)
 
-time.sleep(1)
-while not b.draw():
+for i in range(3):
     print("Move")
     b.rand_move()
     b.print_2d()
+
+i = 0
+print("\n\nProducing successors\n\n")
+b.successors()

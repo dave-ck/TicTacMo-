@@ -1,5 +1,5 @@
 import numpy as np
-
+import ctypes
 
 def generate_lines(n, k):
     num_pos = n ** k
@@ -57,7 +57,7 @@ def generate_lines(n, k):
             continue
         unique_lines.append(line)
         flattened_lines.append(flatten_line(line, n))
-    ret = np.array(flattened_lines)
+    ret = np.array(flattened_lines, dtype='int8')
     return ret
 
 
@@ -71,12 +71,14 @@ def flatten(point, n):
 def flatten_line(line, n):
     return list(map(lambda x: flatten(x, n), line))
 
+# n = 3
+# k = 2
+# indata = generate_lines(n, k)
+# lib = ctypes.cdll.LoadLibrary('./cboard.so')
+# init_lines = lib.initLines
+# is_line = lib.is_line
+# init_vars = lib.initVars
+# init_vars(n, k)
+# init_lines(ctypes.c_void_p(indata.ctypes.data), ctypes.c_int(indata.shape[0]), ctypes.c_int(indata.shape[1]))
+# print("waddup")
 
-print(flatten_line([[0, 0], [0, 1]], 2))
-print(flatten_line([[0, 0], [0, 1]], 3))
-print(flatten_line([[0, 0], [1, 1], [2, 2]], 3))
-print(flatten_line([[0, 0], [1, 0], [2, 0]], 3))
-
-print(generate_lines(2, 2))
-print(generate_lines(3, 2))
-print(generate_lines(3, 3))

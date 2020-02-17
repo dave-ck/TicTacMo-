@@ -1,7 +1,7 @@
 import time
 
 import gym.core as gc
-from board import Board
+from board_naive import Board
 
 
 class nkq_game(gc.Env):

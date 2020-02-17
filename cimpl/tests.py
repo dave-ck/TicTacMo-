@@ -1,33 +1,49 @@
+from cimpl.cinit import generate_lines
 import ctypes
-import numpy
+import numpy as np
 
 lib = ctypes.cdll.LoadLibrary('./cboard.so')
 draw = lib.draw
-init_vars = lib.init_vars
-k = 3
-n = 4
-ones = numpy.ones((n ** k), dtype=numpy.uint)
-zeros = numpy.zeros((n ** k), dtype=numpy.int)
-mix = zeros.copy()
-mix[5:8] = 1
-mix[20:23] = 1
-mix = mix * 212
+win = lib.win
+init_lines = lib.initLines
+init_vars = lib.initVars
+c_print = lib.printArr
+print_lines = lib.printLines
 
+k = 2
+n = 3
 
+state_neutral = np.array([0, 0, 0,
+                          0, 1, 0,
+                          0, 0, -1], dtype='int8')
 
-ones[20:] = 3
-ones = ones * 2
-init_vars(k, n)
+state_win = np.array([0, -1, 0,
+                      1, -1, 1,
+                      0, -1, 1], dtype='int8')
 
+state_draw = np.array([1, -1, 1,
+                       -1, -1, 1,
+                       1, 1, -1], dtype='int8')
 
-print(ones)
-print(draw(ctypes.c_void_p(ones.ctypes.data)))  # should be true
+init_vars(n, k)
+lines = generate_lines(n, k)
+init_lines(ctypes.c_void_p(lines.ctypes.data), ctypes.c_int(lines.shape[0]), ctypes.c_int(lines.shape[1]))
+print_lines()
 
+print(state_neutral)
+print("Draw:", draw(ctypes.c_void_p(state_neutral.ctypes.data)))
+print("Win 1:", win(ctypes.c_void_p(state_neutral.ctypes.data), ctypes.c_int8(1)))
+print("Win -1:", win(ctypes.c_void_p(state_neutral.ctypes.data), ctypes.c_int8(-1)))
+c_print(ctypes.c_void_p(state_neutral.ctypes.data))
 
+print(state_win)
+print("Draw:", draw(ctypes.c_void_p(state_win.ctypes.data)))
+print("Win 1:", win(ctypes.c_void_p(state_win.ctypes.data), ctypes.c_int8(1)))
+print("Win -1:", win(ctypes.c_void_p(state_win.ctypes.data), ctypes.c_int8(-1)))
+c_print(ctypes.c_void_p(state_win.ctypes.data))
 
-print(zeros)
-print(draw(ctypes.c_void_p(zeros.ctypes.data)))  # should be false
-
-print(mix)
-print(draw(ctypes.c_void_p(mix.ctypes.data)))  # should be true
-
+print(state_draw)
+print("Draw:", draw(ctypes.c_void_p(state_draw.ctypes.data)))
+print("Win 1:", win(ctypes.c_void_p(state_draw.ctypes.data), ctypes.c_int8(1)))
+print("Win -1:", win(ctypes.c_void_p(state_draw.ctypes.data), ctypes.c_int8(-1)))
+c_print(ctypes.c_void_p(state_draw.ctypes.data))

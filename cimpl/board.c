@@ -1,80 +1,98 @@
 #include <stdio.h>
-#include <math.h> 
+#include <math.h>
+#include <stdlib.h>
+// pthreads vs bsp for C
 
 int k = 0;
 int n = 0;
 int len = 0;
+char **lines; //initialize to null and test for null when free-ing
+int rowcount;
+int colcount;
 
 
-
-void init_vars(int k_, int n_){
+void initVars(int n_, int k_){
     k = k_;
     n = n_;
     len = pow(n, k); // len = n^k
     printf("Initialized Cimpl with n=%d, k=%d, len=%d\n", n, k, len);
 }
 
+void initLines(const void * indatav, int rowcount_in, int colcount_in) {
+    // free each row separately, then top layer
+    rowcount = rowcount_in;
+    colcount = colcount_in;
+    lines = malloc(rowcount*sizeof(char*));
+    const char * indata = (char *) indatav;
+    for (int row = 0; row < rowcount; ++row){
+        lines[row] = malloc(colcount*sizeof(char*));
+        for (int col = 0; col < colcount; ++col){
+            int i = row * colcount + col;
+            lines[row][col] = indata[i];
+            printf("%d, %d: %d\n", row, col, indata[i]);
+        }
+    }
+
+}
+
+// for testing purposes only - verify that some input vector is a line
+int isLine(const void * indatav, int rowcount, int colcount) {
+    const char * indata = (char *) indatav;
+    for (int row = 0; row < rowcount; ++row){
+        int match = 1;
+        int revMatch = 1; // check if reversed input is a match as well
+        for (int col = 0; col < colcount; ++col){
+            match = match && (lines[row][col] == indata[col]);
+            revMatch = revMatch && (lines[row][col] == indata[colcount-1-col]);
+        }
+        if (match) return 1;
+    }
+    return 0;
+}
+
+int win(const void * indatav, char symbol){
+//    printf("Checking for win with symbol: %d on board:\n", symbol);
+    const char * board = (char *) indatav;
+    for (int row = 0; row < rowcount; ++row){
+        int line_win = 1;
+        for(int col = 0; col < colcount; ++col){
+            line_win = line_win && (board[lines[row][col]]==symbol);
+        }
+        if (line_win) return 1;
+    }
+    return 0;
+}
+
 int draw(const void * boardCells){
-    const int * boardCells_ = (int *) boardCells;
+    const char * boardCells_ = (char *) boardCells;
     for (int i = 0; i < len; ++i) {
-        // printf("%d:%d\n", i, boardCells_[i]);
-        if (boardCells_[i]==0) return 0; // if any cell is empty, return false
+        if (boardCells_[i]==0) {
+//            printf("Board cell %d was empty, held value %d\nSee board:\n", i, boardCells_[i]);
+            printArr(boardCells);
+            return 0; // if any cell is empty, return false
+        }
+//        else {
+//            printf("Board cell %d was not empty, held value %d\n", i, boardCells_[i]);
+//        }
     }
     return 1;
 }
 
-//bool win(const void * board, int len, int symbol) {
-//    // return true if symbol has a winning set in the input board.
-//    const int * board = (int *) indatav;
-//    for (int i = 0; i < len; i++) {
-//        out &= (board[i] > k);
-//    }
-//
-//
-//	}
-//
-//int read(const void * board, const void * vector, int len){
-//    // return the symbol held at coordinates given by the vector
-//
-//}
-//
-//
-//
-//def win_imperative(moves_list, n):
-//    print("Trying {}, {}".format(moves_list, n))
-//    if not moves_list:
-//        return False
-//    moves_list = sorted(moves_list)
-//    # choose the starting vector.
-//    for vector0 in moves_list:
-//        # Any winning set will necessarily include at least one vector containing at least one zero.
-//        # Assume wlog that this is vector1.
-//        if 0 not in vector0:
-//            continue
-//        # choose a second vector different from the first
-//        for vector1 in moves_list:
-//            if vector0 == vector1:
-//                continue
-//            # print("Trying pair", vector0, ",", vector1)
-//            # calculate the "gradient"
-//            grads = []
-//            for i in range(len(vector0)):  # same len as vector1 - may need error checking
-//                grads.append(vector1[i] - vector0[i])
-//            # if the 2 vectors are NOT adjacent, break:
-//            adjacent = True
-//            for grad in grads:
-//                adjacent = adjacent and grad in [-1, 0, 1]
-//            if not adjacent:
-//                continue
-//            # Compute each v_i which would be in the solution V
-//            v_i = vector0[:]
-//            i = 0
-//            while v_i in moves_list:
-//                i += 1
-//                # compute next v_(i+1) by summing v_i and grads pairwise
-//                for j in range(len(v_i)):  # probably good to just define vector length n as a parameter at func start
-//                    v_i[j] += grads[j]  # increment current grid cell by grads
-//            if i == n:  # if the while-loop's condition evaluated to "True" n times
-//                return True
-//    return False
-//*/
+int printArr(const void * boardCells){
+    const char * boardCells_ = (char *) boardCells;
+    for (int i = 0; i < len; ++i) {
+        printf("%d, ", boardCells_[i]);
+    }
+    printf("\n");
+    return 1;
+}
+
+int printLines(){
+    printf("printing %d lines\n", rowcount);
+    for (int row = 0; row < rowcount; ++row){
+        for(int col = 0; col < colcount; ++col){
+            printf("line %d, index %d:%d\n", row, col, lines[row][col]);
+        }
+    }
+    return 0;
+}

@@ -68,7 +68,7 @@ int draw(const void * boardCells){
     for (int i = 0; i < len; ++i) {
         if (boardCells_[i]==0) {
 //            printf("Board cell %d was empty, held value %d\nSee board:\n", i, boardCells_[i]);
-            printArr(boardCells);
+//            printArr(boardCells);
             return 0; // if any cell is empty, return false
         }
 //        else {

@@ -1,4 +1,4 @@
-from board_naive import Board
+from obsolete.board_naive import Board
 from game import Game
 from player import Randy
 from phils_dq import TF_Player, Agent

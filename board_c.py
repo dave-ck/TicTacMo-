@@ -30,8 +30,6 @@ state_draw = np.array([1, -1, 1,
                        -1, -1, 1,
                        1, 1, -1], dtype='int8')
 
-
-
 print(state_neutral)
 print("Draw:", cdraw(ctypes.c_void_p(state_neutral.ctypes.data)))
 print("Win 1:", cwin(ctypes.c_void_p(state_neutral.ctypes.data), ctypes.c_int8(1)))
@@ -39,11 +37,9 @@ print("Win -1:", cwin(ctypes.c_void_p(state_neutral.ctypes.data), ctypes.c_int8(
 c_print(ctypes.c_void_p(state_neutral.ctypes.data))
 
 
-
 ##############
 ## /C setup ##
 ##############
-
 
 
 class Board:  # Cimpl entire class as a struct, functions as methods taking the struct as a parameter
@@ -62,7 +58,7 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
         num_pos = n ** k
         positions = np.zeros([num_pos], dtype='int8')
         init_vars(n, k)
-        lines = generate_lines(n, k)    # implement some checking; init_lines and init_vars iff current n, k undesired
+        lines = generate_lines(n, k)  # implement some checking; init_lines and init_vars iff current n, k undesired
         init_lines(ctypes.c_void_p(lines.ctypes.data), ctypes.c_int(lines.shape[0]), ctypes.c_int(lines.shape[1]))
         return cls(n, k, num_pos, positions, lines, turn=0)
 
@@ -84,7 +80,6 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
     # consider refactoring to only consider whether the *last* move is a part of a win
     def win(self, symbol):
         return cwin(ctypes.c_void_p(self.positions.ctypes.data), ctypes.c_int8(symbol))
-
 
     # todo: rework reward function to return int instead of dict
     def reward(self, player, q, win_forcer=-1):
@@ -161,7 +156,7 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
         sub = {-1: " O ", 0: "   ", 1: " X "}
         board = list(map(lambda x: sub[x], self.positions))
         board = ''.join(board)
-        board_split = [board[i*3:(i + self.n)*3] for i in range(0, self.num_pos, self.n)]
+        board_split = [board[i * 3:(i + self.n) * 3] for i in range(0, self.num_pos, self.n)]
         for i in range(self.n):
             board_split[i] = str(i) + board_split[i] + str(i)
         head_foot = ' ' + ''.join([' ' + str(i) + ' ' for i in range(self.n)])
@@ -169,6 +164,33 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
         for row in board_split:
             print(row)
         print(head_foot)
+
+
+def generate_transforms(n, k):
+    num_pos = n ** k
+    base_np = np.reshape(np.arange(num_pos), [n] * k)
+    # produce all 'one-step' transforms
+    transforms = []
+    for dim in range(k):
+        # produce base flipped through axis dim
+        transforms.append(np.flip(base_np, dim))
+        for dim_ in range(k):
+            # produce base rotated in the plane given by dim and dim_
+            if dim != dim_:
+                transforms.append(
+                    np.rot90(base_np, k=1, axes=(dim, dim_)))  # no need to use other k, can compose with self
+    transforms = [np.reshape(arr, num_pos) for arr in transforms]
+    collection = [[i for i in range(num_pos)]]
+    collection_grew = True
+    while collection_grew:
+        collection_grew = False
+        for transform in collection:
+            for base_transform in transforms:
+                temp_tf = [base_transform[transform[i]] for i in range(num_pos)]
+                if temp_tf not in collection:
+                    collection.append(temp_tf)
+                    collection_grew = True
+    return np.array(collection, dtype='int8')
 
 
 def generate_lines(n, k):
@@ -234,13 +256,12 @@ def generate_lines(n, k):
 def flatten(point, n):
     total = 0
     for i in range(len(point)):
-        total += point[i]*n**i
+        total += point[i] * n ** i
     return total
 
 
 def flatten_line(line, n):
     return list(map(lambda x: flatten(x, n), line))
-
 
 
 class Game:
@@ -259,7 +280,7 @@ class Game:
         self.k = k
         self.p = n ** k  # precompute for speed
         self.players = players[:q] + [None] * (
-                    q - len(players))  # pad with None (nondeterministic) players up to q size
+                q - len(players))  # pad with None (nondeterministic) players up to q size
         # initialize set of configurations with just the empty configuration
         self.fringe = {Board.blank_board(self.n, self.k)}
         self.successors = set()

@@ -1,4 +1,4 @@
-from board_naive import Board
+from obsolete.board_naive import Board
 import time
 
 

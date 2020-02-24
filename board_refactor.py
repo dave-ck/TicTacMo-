@@ -3,15 +3,17 @@ import random
 import numpy as np
 from copy import deepcopy
 
+
 class Board:  # Cimpl entire class as a struct, functions as methods taking the struct as a parameter
 
-    def __init__(self, n, k, num_pos, positions, lines, turn):
+    def __init__(self, n, k, num_pos, positions, lines, mappings, turn):
         self.name = "Game"
         self.n = n  # number of
         self.k = k  # number of dimensions
         self.num_pos = num_pos  # precomputed and passed as param for speed, p = n**k
         self.turn = turn  # specific to configuration
         self.lines = lines or generate_lines(n, k)
+        self.mappings = mappings
         self.positions = positions  # 0 for empty, 1 for X (first and odd moves), -1 for O (second and even moves)
 
     @classmethod
@@ -19,11 +21,12 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
         num_pos = n ** k
         positions = [0 for _ in range(num_pos)]
         lines = generate_lines(n, k)
-        return cls(n, k, num_pos, positions, lines, turn=0)
+        mappings = generate_transforms(n, k)
+        return cls(n, k, num_pos, positions, lines, mappings, turn=0)
 
     def reset(self):
         self.turn = 0
-        positions = [0 for _ in range(self.num_pos)]
+        self.positions = [0 for _ in range(self.num_pos)]
 
     def successors(self):  # Cimpl with isomorphism checks
         """
@@ -33,7 +36,12 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
         successors = set()
         for index in range(self.num_pos):
             if self.positions[index] == 0:
-                successors.update({self.move_clone(index)})
+                successors.update({self.move_clone(index).reduce()})
+        for successor in successors.copy():
+            for equiv in successors.copy():
+                if equiv.equals(successor):
+                    successors.remove(equiv)
+            successors.add(successor)  # otherwise just empties entire collection
         return successors
 
     # consider refactoring to only consider whether the *last* move is a part of a win
@@ -76,6 +84,18 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
         clone_board = deepcopy(self)
         clone_board.move(position)
         return clone_board
+
+    def reduce(self):
+        best = self.positions
+        for mapping in self.mappings:
+            candidate = apply_transform(self.positions, mapping, self.num_pos)
+            if arr_lt(candidate, best, self.num_pos):
+                best = candidate
+        self.positions = best
+        return self
+
+    def equals(self, other):
+        return other.positions == self.positions
 
     def draw(self):
         return 0 not in self.positions
@@ -121,7 +141,7 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
         sub = {-1: " O ", 0: "   ", 1: " X "}
         board = list(map(lambda x: sub[x], self.positions))
         board = ''.join(board)
-        board_split = [board[i*3:(i + self.n)*3] for i in range(0, self.num_pos, self.n)]
+        board_split = [board[i * 3:(i + self.n) * 3] for i in range(0, self.num_pos, self.n)]
         for i in range(self.n):
             board_split[i] = str(i) + board_split[i] + str(i)
         head_foot = ' ' + ''.join([' ' + str(i) + ' ' for i in range(self.n)])
@@ -193,12 +213,62 @@ def generate_lines(n, k):
 def flatten(point, n):
     total = 0
     for i in range(len(point)):
-        total += point[i]*n**i
+        total += point[i] * n ** i
     return total
 
 
 def flatten_line(line, n):
     return list(map(lambda x: flatten(x, n), line))
+
+
+def generate_transforms(n, k):
+    num_pos = n ** k
+    base_np = np.reshape(np.arange(num_pos), [n] * k)
+    # produce all 'one-step' transforms
+    transforms = []
+    for dim in range(k):
+        # produce base flipped through axis dim
+        transforms.append(np.flip(base_np, dim))
+        for dim_ in range(k):
+            # produce base rotated in the plane given by dim and dim_
+            if dim != dim_:
+                transforms.append(
+                    np.rot90(base_np, k=1, axes=(dim, dim_)))  # no need to use other k, can compose with self
+    transforms = [np.reshape(arr, num_pos) for arr in transforms]
+    collection = [[i for i in range(num_pos)]]
+    collection_grew = True
+    while collection_grew:
+        collection_grew = False
+        for transform in collection:
+            for base_transform in transforms:
+                temp_tf = apply_transform(transform, base_transform, num_pos)
+                if temp_tf not in collection:
+                    collection.append(temp_tf)
+                    collection_grew = True
+    return collection
+
+
+def apply_transform(base, transform, num_pos):
+    """
+    :param num_pos: length of the base and transform arrays
+    :param base: 1-D array to be transformed
+    :param transform: 1-D transform to apply
+    """
+    return [base[transform[i]] for i in range(num_pos)]
+
+
+def arr_lt(arr1, arr2, num_pos):
+    """
+    :param arr1: an n**k integer array
+    :param arr2: an n**k integer array
+    :return: True iff arr1 is less than arr2
+    """
+    for i in range(num_pos):
+        if arr1 < arr2:
+            return True
+        if arr2 < arr1:
+            return False
+    return False
 
 
 b = Board.blank_board(3, 2)
@@ -210,7 +280,10 @@ for i in range(3):
     print("Move")
     b.rand_move()
     b.print_2d()
-
+    print("Reduced:")
+    b.reduce()
+    b.print_2d()
+    print("\n\n")
 i = 0
 print("\n\nProducing successors\n\n")
 b.successors()

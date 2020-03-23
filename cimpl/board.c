@@ -58,9 +58,9 @@ int arrLessThan(char * arr1, char * arr2, int numPos){
 }
 
 void reduce(void * boardInCM){
-    const char * boardIn = (char *) boardInCM;
-    const char * current = malloc(numPos*sizeof(char*));
-    const char * best = malloc(numPos*sizeof(char*));
+    char * boardIn = (char *) boardInCM;
+    char * current = malloc(numPos*sizeof(char*));
+    char * best = malloc(numPos*sizeof(char*));
     memcpy((void *) boardIn, (void *) best, numPos);
     memcpy((void *) boardIn, (void *) current, numPos);
     for (int mapIndex = 0; mapIndex < mappingCount; ++mapIndex){
@@ -130,6 +130,18 @@ int printLines(){
         }
     }
     return 0;
+}
+
+void applyTransform(void * baseIn, void * transformIn, void * arrOutIn, int len){
+    printf("Casting...");
+    char * base = (char *) baseIn;
+    char * transform = (char *) transformIn;
+    char * arrOut = (char *) arrOutIn;
+    printf("Applying...");
+    for (int i = 0; i < len; ++i){
+        arrOut[i] = base[(transform[i])];
+    }
+    printf("Applied!");
 }
 
 

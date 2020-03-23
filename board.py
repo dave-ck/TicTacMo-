@@ -19,7 +19,7 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
     @classmethod
     def blank_board(cls, n, k):
         num_pos = n ** k
-        positions = [0 for _ in range(num_pos)]
+        positions = np.zeros(num_pos)
         lines = generate_lines(n, k)
         mappings = generate_transforms(n, k)
         return cls(n, k, num_pos, positions, lines, mappings, turn=0)
@@ -88,14 +88,14 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
     def reduce(self):
         best = self.positions
         for mapping in self.mappings:
-            candidate = apply_transform(self.positions, mapping, self.num_pos)
+            candidate = self.positions[mapping]
             if arr_lt(candidate, best, self.num_pos):
                 best = candidate
         self.positions = best
         return self
 
     def equals(self, other):
-        return other.positions == self.positions
+        return (other.positions == self.positions).all()
 
     def draw(self):
         return 0 not in self.positions
@@ -139,7 +139,7 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
             return
         # construct a 2D array, then print nicely
         sub = {-1: " O ", 0: "   ", 1: " X "}
-        board = list(map(lambda x: sub[x], self.positions))
+        board = list(map(lambda x: sub[x], list(self.positions)))
         board = ''.join(board)
         board_split = [board[i * 3:(i + self.n) * 3] for i in range(0, self.num_pos, self.n)]
         for i in range(self.n):
@@ -245,7 +245,7 @@ def generate_transforms(n, k):
                 if temp_tf not in collection:
                     collection.append(temp_tf)
                     collection_grew = True
-    return collection
+    return [np.array(transform) for transform in collection]
 
 
 def apply_transform(base, transform, num_pos):
@@ -256,6 +256,10 @@ def apply_transform(base, transform, num_pos):
     """
     return [base[transform[i]] for i in range(num_pos)]
 
+def fast_transform(base, transform):
+    return base[transform]
+
+
 
 def arr_lt(arr1, arr2, num_pos):
     """
@@ -264,26 +268,25 @@ def arr_lt(arr1, arr2, num_pos):
     :return: True iff arr1 is less than arr2
     """
     for i in range(num_pos):
-        if arr1 < arr2:
+        if arr1[i] < arr2[i]:
             return True
-        if arr2 < arr1:
+        if arr2[i] < arr1[i]:
             return False
     return False
 
 
-b = Board.blank_board(3, 2)
-b.print_2d()
-print(b.lines)
-print(b.positions)
+# b = Board.blank_board(3, 2)
+# b.print_2d()
+# print(b.lines)
+# print(b.positions)
+#
+# for i in range(3):
+#     print("Move")
+#     b.rand_move()
+#     b.print_2d()
+#     print("Reduced:")
+#     b.reduce()
+#     b.print_2d()
+#     print("\n\n")
+# i = 0
 
-for i in range(3):
-    print("Move")
-    b.rand_move()
-    b.print_2d()
-    print("Reduced:")
-    b.reduce()
-    b.print_2d()
-    print("\n\n")
-i = 0
-print("\n\nProducing successors\n\n")
-b.successors()

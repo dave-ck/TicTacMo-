@@ -1,15 +1,14 @@
 # https://github.com/philtabor/Youtube-Code-Repository/blob/master/ReinforcementLearning/DeepQLearning/simple_dqn_torch.py
-import ttt_env
-from phils_dq import DeepQNetwork, Agent
-from phils_utils import plotLearning
+from obsolete import ttt_env
+from obsolete.phils_dq import Agent
+from obsolete.phils_utils import plotLearning
 import numpy as np
-from gym import wrappers
 
 
 def play(num_games):
-    env = ttt_env.nkq_game(n=3, k=4)
-    brain = Agent(gamma=0.99, epsilon=1.0, batch_size=64, n_actions=81,
-                  input_dims=[81], alpha=0.003, eps_end=0.001, eps_dec=0.999)
+    env = ttt_env.nkq_game(n=3, k=2)
+    brain = Agent(gamma=0.99, epsilon=1.0, batch_size=64, n_actions=9,
+                  input_dims=[9], alpha=0.003, eps_end=0.001, eps_dec=0.999)
 
     scores = []
     eps_history = []
@@ -55,4 +54,4 @@ def play(num_games):
     brain.save_model(modelname)
 
 
-play(75001)
+play(50000)

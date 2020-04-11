@@ -1,3 +1,4 @@
+// compile with: gcc -fPIC -shared -o cboard.so board.c
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
@@ -132,16 +133,16 @@ int printLines(){
     return 0;
 }
 
-void applyTransform(void * baseIn, void * transformIn, void * arrOutIn, int len){
-    printf("Casting...");
-    char * base = (char *) baseIn;
-    char * transform = (char *) transformIn;
-    char * arrOut = (char *) arrOutIn;
-    printf("Applying...");
+void applyTransform(char * baseIn, char * transformIn, char * arrOutIn, int len){
+//    printf("Casting...");
+//    char * base = (char *) baseIn;
+//    char * transform = (char *) transformIn;
+//    char * arrOut = (char *) arrOutIn;
+//    printf("Applying...");
     for (int i = 0; i < len; ++i){
-        arrOut[i] = base[(transform[i])];
+        arrOutIn[i] = baseIn[(transformIn[i])];
     }
-    printf("Applied!");
+//    printf("Applied!");
 }
 
 

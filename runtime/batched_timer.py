@@ -20,7 +20,7 @@ np_acc_times = []
 py_times = []
 py_acc_times = []
 for batch_size in batch_sizes:
-    reps = int(2**16 / batch_size)
+    reps = int(2 ** 16 / batch_size)
     print("Batch size", batch_size)
     transform = np.arange(num_pos, dtype="int8") + 1
     transform[num_pos - 1] = 0
@@ -38,17 +38,17 @@ for batch_size in batch_sizes:
 
     @jit(nopython=True)
     def map_np_acc_(base, t):
-        for i in range(reps):
-            lineVals = base[:, t]
+        lineVals = base[:, t]
         return lineVals
-
 
     map_np_acc_(base_batch, transform)
 
 
     def map_np_acc(base, t):
+        o = None
         start = time.time()
-        o = map_np_acc_(base, t)
+        for i in range(reps):
+            o = map_np_acc_(base, t)
         end = time.time() - start
         return o, end
 
@@ -57,13 +57,12 @@ for batch_size in batch_sizes:
     def map_py_acc_(base, t):
         n = len(t)
         batch_out = []
-        for i in range(reps):
-            for row_num in range(len(base)):
-                row = base[row_num]
-                out = []
-                for i in range(n):
-                    out.append(row[t[i]])
-                batch_out.append(out)
+        for row_num in range(len(base)):
+            row = base[row_num]
+            out = []
+            for i in range(n):
+                out.append(row[t[i]])
+            batch_out.append(out)
         return batch_out
 
 
@@ -71,8 +70,10 @@ for batch_size in batch_sizes:
 
 
     def map_py_acc(base, t):
+        o = None
         start = time.time()
-        o = map_py_acc_(base, t)
+        for i in range(reps):
+            o = map_py_acc_(base, t)
         end = time.time() - start
         return o, end
 
@@ -121,6 +122,7 @@ for batch_size in batch_sizes:
     _, time_np_acc = map_np_acc(base_batch, transform)
     _, time_py = map_py(base_batch, transform)
     _, time_py_acc = map_py_acc(base_batch, transform)
+    time_torch, time_torch_cpu, time_np, time_np_acc, time_py, time_py_acc = time_torch*1e3, time_torch_cpu*1e3, time_np*1e3, time_np_acc*1e3, time_py*1e3, time_py_acc*1e3
     print("Torch:", time_torch)
     print("Torch (CPU):", time_torch_cpu)
     print("Plain Python:", time_py)
@@ -138,25 +140,25 @@ ind = np.arange(len(batch_sizes))  # the x locations for the groups
 width = 0.12  # the width of the bars
 
 fig, ax = plt.subplots()
-rects1 = ax.bar(ind - width*2.5, torch_gpu_times, width,
-                label='GPU')
-rects2 = ax.bar(ind - width*1.5, torch_cpu_times, width,
-                label='CPU')
-rects3 = ax.bar(ind - width*.5, np_times, width,
-                label='NP')
-rects4 = ax.bar(ind + width*.5, np_acc_times, width,
-                label='Numba NP')
-rects5 = ax.bar(ind + width*1.5, py_times, width,
+rects1 = ax.bar(ind - width * 2.5, torch_gpu_times, width,
+                label='Torch (GPU)')
+rects2 = ax.bar(ind - width * 1.5, torch_cpu_times, width,
+                label='Torch (CPU)')
+rects3 = ax.bar(ind - width * .5, np_times, width,
+                label='Numpy')
+rects4 = ax.bar(ind + width * .5, np_acc_times, width,
+                label='Numba + Numpy')
+rects5 = ax.bar(ind + width * 1.5, py_times, width,
                 label='Plain Python')
-rects6 = ax.bar(ind + width*2.5, py_acc_times, width,
+rects6 = ax.bar(ind + width * 2.5, py_acc_times, width,
                 label='Numba Python')
 
 # Add some text for labels, title and custom x-axis tick labels, etc.
-ax.set_ylabel('Scores')
-ax.set_title('Scores by group and gender')
+ax.set_ylabel('Runtime (milliseconds)')
+ax.set_title('Runtime by implementation and batch size for 65536 total "gather"s')
 ax.set_xticks(ind)
 ax.set_xticklabels(batch_sizes)
-ax.set_xlabel('Board size')
+ax.set_xlabel('Batch size')
 ax.legend()
 
 
@@ -173,7 +175,7 @@ def autolabel(rects, xpos='center'):
 
     for rect in rects:
         height = rect.get_height()
-        ax.annotate('%o' % int(height*1000),
+        ax.annotate('%o' % int(height),
                     xy=(rect.get_x() + rect.get_width() / 3, height),
                     xytext=(offset[xpos] * 3, 0),  # use 3 points offset
                     textcoords="offset points",  # in both directions
@@ -186,7 +188,6 @@ autolabel(rects3, "center")
 autolabel(rects4, "center")
 autolabel(rects5, "center")
 autolabel(rects6, "center")
-
 
 fig.tight_layout()
 

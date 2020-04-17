@@ -136,22 +136,41 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
         return result
 
     def cli(self):
-        if self.k != 2:
-            print("Can't print a game with k != 2!")
-            return
-        # construct a 2D array, then print nicely
-        sub = {0: "   ", 1: " X ", 2: " O ", 3: " = ", 4: " & ", 5: " + ", 6: " L "}
-        board = list(map(lambda x: sub[x], list(self.positions)))
-        board = ''.join(board)
-        board_split = [board[i * 3:(i + self.n) * 3] for i in range(0, self.num_pos, self.n)]
-        for i in range(self.n):
-            board_split[i] = str(i) + board_split[i] + str(i)
-        head_foot = ' ' + ''.join([' ' + str(i) + ' ' for i in range(self.n)])
-        print(head_foot)
-        for row in board_split:
-            print(row)
-        print(head_foot)
+        if self.k == 2:
 
+            # construct a 2D array, then print nicely
+            sub = {0: "   ", 1: " X ", 2: " O ", 3: " = ", 4: " & ", 5: " + ", 6: " L "}
+            board = list(map(lambda x: sub[x], list(self.positions)))
+            board = ''.join(board)
+            board_split = [board[i * 3:(i + self.n) * 3] for i in range(0, self.num_pos, self.n)]
+            for i in range(self.n):
+                board_split[i] = str(i) + board_split[i] + str(i)
+            head_foot = ' ' + ''.join([' ' + str(i) + ' ' for i in range(self.n)])
+            print(head_foot)
+            for row in board_split:
+                print(row)
+            print(head_foot)
+        elif self.k==3:
+            head_foot = '       ' + '       '.join([(''.join([' %1d ' % i for i in range(self.n)])) for _ in range(self.n)])
+            level_line = (" " * 2 * self.n) + (" " * (5 * self.n - 5)).join(["Level %1d" % lvl for lvl in range(self.n)])
+            d = {0: " ", 1: "X", 2: "O", 3: "=", 4: "Z"}
+            board = np.array(list(map(lambda x: d[x], self.positions))).reshape([self.n] * 3)
+            # reshape to 3D, then print nicely
+            boardLines = ["" for _ in range(self.n)]
+            for level in range(self.n):
+                for row in range(self.n):
+                    if level == 0:
+                        boardLines[row] += "   %1d   " % row
+                    boardLines[row] += " %s " * self.n % tuple(
+                        board[level, row])  # leave %1d, makes spacing consistent once replaced
+                    if level < self.n:
+                        boardLines[row] += "   %1d   " % row
+            print(level_line)
+            print(head_foot)
+            for bL in boardLines:
+                print(bL)
+            print(head_foot)
+            print(level_line)
 
 def generate_lines(n, k):
     num_pos = n ** k
@@ -278,8 +297,8 @@ def arr_lt(arr1, arr2, num_pos):
     return False
 
 
-b = Board.blank_board(4, 2, 3)
-for _ in range(16):
+b = Board.blank_board(3, 3, 3)
+for _ in range(5):
     b.rand_move()
     b.cli()
     for i in range(1, 4):

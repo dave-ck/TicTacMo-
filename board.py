@@ -1,3 +1,5 @@
+import numba
+from numba import jit
 import time
 import random
 import numpy as np
@@ -6,23 +8,25 @@ from copy import deepcopy
 
 class Board:  # Cimpl entire class as a struct, functions as methods taking the struct as a parameter
 
-    def __init__(self, n, k, num_pos, positions, lines, mappings, turn):
+    def __init__(self, n, k, q, num_pos, positions, lines, mappings, turn):
         self.name = "Game"
         self.n = n  # number of
         self.k = k  # number of dimensions
+        self.q = q  # number of players
         self.num_pos = num_pos  # precomputed and passed as param for speed, p = n**k
         self.turn = turn  # specific to configuration
-        self.lines = lines or generate_lines(n, k)
+        self.lines = lines
+        self.num_lines = len(self.lines)
         self.mappings = mappings
         self.positions = positions  # 0 for empty, 1 for X (first and odd moves), -1 for O (second and even moves)
 
     @classmethod
-    def blank_board(cls, n, k):
+    def blank_board(cls, n, k, q):
         num_pos = n ** k
         positions = np.zeros(num_pos)
         lines = generate_lines(n, k)
         mappings = generate_transforms(n, k)
-        return cls(n, k, num_pos, positions, lines, mappings, turn=0)
+        return cls(n, k, q, num_pos, positions, lines, mappings, turn=0)
 
     def reset(self):
         self.turn = 0
@@ -54,25 +58,9 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
                 return True
         return False
 
-    # todo: rework reward function to return int instead of dict
-    def reward(self, player, q, win_forcer=-1):
-        """
-        Generate a reward for the player in a q-player game based on how "desirable" the current configuration is to
-        that player.
-        :param player: the player's number - 0 for the 1st player.
-        :param q: the total number of players
-        :param win_forcer: number of the player who can force a win, or -1 if no such player
-        :return: a dictionary {player_number: reward}
-        """
-        raise NotImplementedError
-
     def move(self, position):  # return a copy of the config, with the move added
-        if self.positions[position] != 0:  # illegal move; does not affect game state and player loses their move
-            return
-        elif self.turn % 2:  # if O is about to move
-            self.positions[position] = -1
-        else:  # X is about to move
-            self.positions[position] = 1
+        if self.positions[position] == 0:  # illegal move are ignored, turn incremented and player loses their move
+            self.positions[position] = self.turn % self.q + 1
         self.turn += 1
 
     def move_clone(self, position):
@@ -119,6 +107,20 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
     def move_available(self, index):
         return self.positions[index] == 0
 
+    def reward(self, symbol):
+        if self.win(symbol):
+            return self.num_lines * self.num_pos  # in excess of the maximum possible cumulative reward from *not* winning
+        symbolSums = [(self.positions[self.lines] == i).sum(axis=1) for i in range(self.q + 1)]
+        # for i in range(self.q + 1):
+        #     print(i, symbolSums[i])
+        blockers = [i for i in range(self.q + 1) if i not in [0, symbol]]
+        excl = np.zeros(self.num_lines)
+        for blocker in blockers:
+            excl = np.logical_or(symbolSums[blocker], excl)
+        incl = np.logical_and(np.logical_not(excl), symbolSums[symbol])
+        # print("incl", incl)
+        return (1 / (self.n - symbolSums[1][incl])).sum()
+
     def __copy__(self):  # https://stackoverflow.com/a/15774013/12387665
         cls = self.__class__
         result = cls.__new__(cls)
@@ -133,12 +135,12 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
             setattr(result, k, deepcopy(v, memo))
         return result
 
-    def print_2d(self):
+    def cli(self):
         if self.k != 2:
             print("Can't print a game with k != 2!")
             return
         # construct a 2D array, then print nicely
-        sub = {-1: " O ", 0: "   ", 1: " X "}
+        sub = {0: "   ", 1: " X ", 2: " O ", 3: " = ", 4: " & ", 5: " + ", 6: " L "}
         board = list(map(lambda x: sub[x], list(self.positions)))
         board = ''.join(board)
         board_split = [board[i * 3:(i + self.n) * 3] for i in range(0, self.num_pos, self.n)]
@@ -207,7 +209,8 @@ def generate_lines(n, k):
             continue
         unique_lines.append(line)
         flattened_lines.append(flatten_line(line, n))
-    return flattened_lines
+    sorted_lines = list(map(lambda x: list(sorted(x)), flattened_lines))
+    return np.array(sorted_lines)
 
 
 def flatten(point, n):
@@ -256,9 +259,9 @@ def apply_transform(base, transform, num_pos):
     """
     return [base[transform[i]] for i in range(num_pos)]
 
+
 def fast_transform(base, transform):
     return base[transform]
-
 
 
 def arr_lt(arr1, arr2, num_pos):
@@ -275,18 +278,20 @@ def arr_lt(arr1, arr2, num_pos):
     return False
 
 
-# b = Board.blank_board(3, 2)
-# b.print_2d()
-# print(b.lines)
-# print(b.positions)
-#
-# for i in range(3):
+b = Board.blank_board(4, 2, 3)
+for _ in range(16):
+    b.rand_move()
+    b.cli()
+    for i in range(1, 4):
+        print(i, b.reward(i))
+
+# for _ in range(16):
 #     print("Move")
 #     b.rand_move()
-#     b.print_2d()
-#     print("Reduced:")
-#     b.reduce()
-#     b.print_2d()
+#     b.cli()
+#     print("positions", b.positions)
 #     print("\n\n")
+#     print("1", b.win(1))
+#     print("2", b.win(2))
+#     print("3", b.win(3))
 # i = 0
-

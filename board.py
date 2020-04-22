@@ -128,7 +128,8 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
                 opponent_excl = np.logical_or(symbolSums[blocker], opponent_excl)
             opponent_incl = np.logical_and(np.logical_not(opponent_excl), symbolSums[opponent])
             minus += (1 / (self.n - symbolSums[opponent][opponent_incl])).sum()
-        return plus - (minus / (self.q-1))
+        print("cls - Symbol: %d; Minus: %d; Plus: %d" % (symbol, minus, plus))
+        return plus - (minus / (self.q - 1))
 
     def __copy__(self):  # https://stackoverflow.com/a/15774013/12387665
         cls = self.__class__
@@ -184,7 +185,7 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
             print(level_line)
 
     def human_move(self):
-        if self.k not in [2,3]:
+        if self.k not in [2, 3]:
             raise ValueError("Human move not implemented for dimensionality not equal to 2 or 3.")
         print("The current board state is:")
         self.cli()
@@ -194,7 +195,7 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
             level = 0 if self.k == 2 else int(input("Which level would you like to play on (0-%d)? " % self.n))
             column = int(input("Which column would you like to play on (0-%d)? " % self.n))
             row = int(input("Which row would you like to play on (0-%d)? " % self.n))
-            choice = level * self.n**2 + row * self.n + column
+            choice = level * self.n ** 2 + row * self.n + column
             assert self.move_available(choice)
             assert level in range(self.n)
             assert column in range(self.n)
@@ -208,6 +209,7 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
             return
         print(choice)
         self.move(choice)
+
 
 def generate_lines(n, k):
     num_pos = n ** k
@@ -335,34 +337,46 @@ def arr_lt(arr1, arr2, num_pos):
 
 
 @jit(nopython=True)
-def acc_reward(n, k, q, positions, lines, ):
-    if acc_win(symbol):
-        return self.num_lines * self.num_pos  # in excess of the maximum possible cumulative reward from *not* winning
-    symbolSums = [(self.positions[self.lines] == i).sum(axis=1) for i in range(self.q + 1)]
-    blockers = [i for i in range(self.q + 1) if i not in [0, symbol]]
-    if any([self.win(blocker) for blocker in blockers]):
-        return -1 * self.num_lines * self.num_pos
-    excl = np.zeros(self.num_lines)
+def reward_(n, k, q, positions, lines, num_pos, symbol, num_lines):
+    blockers = [i for i in range(q + 1) if i != 0 and i != symbol]
+    symbolSums = [(positions.take(lines) == i).sum(axis=1, dtype=np.int16) for i in range(q + 1)]
+    if np.any(symbolSums[symbol] == n):  # if the symbol queried has won
+        return num_lines * num_pos  # in excess of the maximum possible cumulative reward from *not* winning
     for blocker in blockers:
-        excl = np.logical_or(symbolSums[blocker], excl)
+        if np.any(symbolSums[blocker] == n):  # if an opponent is in a winning configuration
+            return -1 * num_lines * num_pos
+    excl = np.zeros(num_lines) == 1  # need to trick into having type bool - numba won't compile with dtype=np.bool flag
+    for blocker in blockers:
+        excl = np.logical_or(symbolSums[blocker] != 0, excl)
     incl = np.logical_and(np.logical_not(excl), symbolSums[symbol])
-    plus = (1 / (self.n - symbolSums[symbol][incl])).sum()
+    plus = (1 / (n - symbolSums[symbol][incl])).sum()
     minus = 0
     for opponent in blockers:
-        # print("Calculating for opponent", opponent)
-        opponent_blockers = [i for i in range(self.q + 1) if i not in [0, opponent]]
-        opponent_excl = np.zeros(self.num_lines)
+        opponent_blockers = [i for i in range(q + 1) if i != 0 and i != opponent]
+        opponent_excl = np.zeros(num_lines) == 1
         for blocker in opponent_blockers:
-            opponent_excl = np.logical_or(symbolSums[blocker], opponent_excl)
+            opponent_excl = np.logical_or(symbolSums[blocker] != 0, opponent_excl)
         opponent_incl = np.logical_and(np.logical_not(opponent_excl), symbolSums[opponent])
-        minus += (1 / (self.n - symbolSums[opponent][opponent_incl])).sum()
-    return plus - (minus / self.q)
+        minus += (1 / (n - symbolSums[opponent][opponent_incl])).sum()
+    # print("acc - Symbol: " + str(symbol) + "; Minus: " + str(minus) + "; Plus: " + str(plus))
+    print("acc; minus-plus-symbol:")
+    print(minus)
+    print(plus)
+    print(symbol)
+    return plus - (minus / (q - 1))
 
 
-b = Board.blank_board(3, 2, 3)
-while True:
-    b.human_move()
-
+b = Board.blank_board(3, 3, 3)
+for _ in range(2):
+    b.rand_move()
+    print("\n\n\n\n")
+    b.cli()
+    for player in [1]:
+        inClass = b.reward(player)
+        accVal = reward_(b.n, b.k, b.q, b.positions, b.lines, b.num_pos, player, b.num_lines)
+        print("board.reward(%d): %d" % (player, inClass))
+        print("reward_(board, player = %d, ...): %d" % (player, accVal))
+        print()
 # for _ in range(10):
 #     b.rand_move()
 #     b.cli()

@@ -111,15 +111,24 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
         if self.win(symbol):
             return self.num_lines * self.num_pos  # in excess of the maximum possible cumulative reward from *not* winning
         symbolSums = [(self.positions[self.lines] == i).sum(axis=1) for i in range(self.q + 1)]
-        # for i in range(self.q + 1):
-        #     print(i, symbolSums[i])
         blockers = [i for i in range(self.q + 1) if i not in [0, symbol]]
+        if any([self.win(blocker) for blocker in blockers]):
+            return -1 * self.num_lines * self.num_pos
         excl = np.zeros(self.num_lines)
         for blocker in blockers:
             excl = np.logical_or(symbolSums[blocker], excl)
         incl = np.logical_and(np.logical_not(excl), symbolSums[symbol])
-        # print("incl", incl)
-        return (1 / (self.n - symbolSums[1][incl])).sum()
+        plus = (1 / (self.n - symbolSums[symbol][incl])).sum()
+        minus = 0
+        for opponent in blockers:
+            # print("Calculating for opponent", opponent)
+            opponent_blockers = [i for i in range(self.q + 1) if i not in [0, opponent]]
+            opponent_excl = np.zeros(self.num_lines)
+            for blocker in opponent_blockers:
+                opponent_excl = np.logical_or(symbolSums[blocker], opponent_excl)
+            opponent_incl = np.logical_and(np.logical_not(opponent_excl), symbolSums[opponent])
+            minus += (1 / (self.n - symbolSums[opponent][opponent_incl])).sum()
+        return plus - (minus / (self.q-1))
 
     def __copy__(self):  # https://stackoverflow.com/a/15774013/12387665
         cls = self.__class__
@@ -150,9 +159,11 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
             for row in board_split:
                 print(row)
             print(head_foot)
-        elif self.k==3:
-            head_foot = '       ' + '       '.join([(''.join([' %1d ' % i for i in range(self.n)])) for _ in range(self.n)])
-            level_line = (" " * 2 * self.n) + (" " * (5 * self.n - 5)).join(["Level %1d" % lvl for lvl in range(self.n)])
+        elif self.k == 3:
+            head_foot = '       ' + '       '.join(
+                [(''.join([' %1d ' % i for i in range(self.n)])) for _ in range(self.n)])
+            level_line = (" " * 2 * self.n) + (" " * (5 * self.n - 5)).join(
+                ["Level %1d" % lvl for lvl in range(self.n)])
             d = {0: " ", 1: "X", 2: "O", 3: "=", 4: "Z"}
             board = np.array(list(map(lambda x: d[x], self.positions))).reshape([self.n] * 3)
             # reshape to 3D, then print nicely
@@ -171,6 +182,32 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
                 print(bL)
             print(head_foot)
             print(level_line)
+
+    def human_move(self):
+        if self.k not in [2,3]:
+            raise ValueError("Human move not implemented for dimensionality not equal to 2 or 3.")
+        print("The current board state is:")
+        self.cli()
+        print("This is represented by the array:")
+        print(self.positions)
+        try:
+            level = 0 if self.k == 2 else int(input("Which level would you like to play on (0-%d)? " % self.n))
+            column = int(input("Which column would you like to play on (0-%d)? " % self.n))
+            row = int(input("Which row would you like to play on (0-%d)? " % self.n))
+            choice = level * self.n**2 + row * self.n + column
+            assert self.move_available(choice)
+            assert level in range(self.n)
+            assert column in range(self.n)
+            assert row in range(self.n)
+        except Exception:
+            print("Invalid move; perhaps you did not enter integers in the range,"
+                  " or input the coordinates of an already-occupied cell.")
+            print()
+            print("Please try again:")
+            self.human_move()
+            return
+        print(choice)
+        self.move(choice)
 
 def generate_lines(n, k):
     num_pos = n ** k
@@ -297,13 +334,48 @@ def arr_lt(arr1, arr2, num_pos):
     return False
 
 
-b = Board.blank_board(3, 3, 3)
-for _ in range(5):
-    b.rand_move()
-    b.cli()
-    for i in range(1, 4):
-        print(i, b.reward(i))
+@jit(nopython=True)
+def acc_reward(n, k, q, positions, lines, ):
+    if acc_win(symbol):
+        return self.num_lines * self.num_pos  # in excess of the maximum possible cumulative reward from *not* winning
+    symbolSums = [(self.positions[self.lines] == i).sum(axis=1) for i in range(self.q + 1)]
+    blockers = [i for i in range(self.q + 1) if i not in [0, symbol]]
+    if any([self.win(blocker) for blocker in blockers]):
+        return -1 * self.num_lines * self.num_pos
+    excl = np.zeros(self.num_lines)
+    for blocker in blockers:
+        excl = np.logical_or(symbolSums[blocker], excl)
+    incl = np.logical_and(np.logical_not(excl), symbolSums[symbol])
+    plus = (1 / (self.n - symbolSums[symbol][incl])).sum()
+    minus = 0
+    for opponent in blockers:
+        # print("Calculating for opponent", opponent)
+        opponent_blockers = [i for i in range(self.q + 1) if i not in [0, opponent]]
+        opponent_excl = np.zeros(self.num_lines)
+        for blocker in opponent_blockers:
+            opponent_excl = np.logical_or(symbolSums[blocker], opponent_excl)
+        opponent_incl = np.logical_and(np.logical_not(opponent_excl), symbolSums[opponent])
+        minus += (1 / (self.n - symbolSums[opponent][opponent_incl])).sum()
+    return plus - (minus / self.q)
 
+
+b = Board.blank_board(3, 2, 3)
+while True:
+    b.human_move()
+
+# for _ in range(10):
+#     b.rand_move()
+#     b.cli()
+#     for i in range(1, 4):
+#         print(i, b.reward(i))
+#
+# reps = int(1e4)
+# s = time.time()
+# for _ in range(reps):
+#     for i in range(1, 4):
+#         b.reward(i)
+# e = time.time()
+# print('time for %d reward calculations: %f' % (reps, e - s))
 # for _ in range(16):
 #     print("Move")
 #     b.rand_move()

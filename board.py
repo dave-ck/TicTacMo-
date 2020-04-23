@@ -49,7 +49,7 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
         return successors
 
     # consider refactoring to only consider whether the *last* move is a part of a win
-    def win(self, symbol):
+    def win(self):
         return win_(self.n, self.k, self.q, self.positions, self.lines, self.num_pos, self.num_lines)
 
     def move(self, position):  # return a copy of the config, with the move added
@@ -77,7 +77,7 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
         return 0 not in self.positions
 
     def to_linear_array(self):
-        return np.array(self.positions, dtype='int8')
+        return np.array(self.positions, dtype='int64')
 
     def rand_move(self, recursed=0):
         if recursed < 100:
@@ -91,6 +91,19 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
                 if self.positions[index] == 0:
                     return index
             raise ValueError("No random move is possible on a full board.")
+
+    def greedy_move(self):
+        best_score = np.inf * -1
+        best_move = 0
+        player_symbol = (self.turn % self.q) + 1
+        for move in range(self.num_pos):
+            if self.positions[move] == 0:
+                board = self.move_clone(move)
+                reward = board.reward(player_symbol)
+                if reward > best_score:
+                    best_move = move
+                    best_score = reward
+        self.move(best_move)
 
     def move_available(self, index):
         return self.positions[index] == 0
@@ -338,8 +351,8 @@ def reward_(n, k, q, positions, lines, num_pos, symbol, num_lines):
             opponent_excl = np.logical_or(symbolSums[blocker] != 0, opponent_excl)
         opponent_incl = np.logical_and(np.logical_not(opponent_excl), symbolSums[opponent])
         minus += (1 / (n - symbolSums[opponent][opponent_incl])).sum()
-    return plus - (minus / (q - 1))
-
+    return plus - minus #(minus / (q - 1))
+    """ comment in report - enforcing the game is zero-sum yields quite poor play"""
 
 # return Q if player Q has a winning line (if more than one player has a winning line, the lowest-number player is
 # returned); returns 0 if not a winning configuration
@@ -351,15 +364,10 @@ def win_(n, k, q, positions, lines, num_pos, num_lines):
             return player
     return 0
 
-
-b = Board.blank_board(3, 2, 3)
-for move in [0, 1, 3, 2, 4, 6, 7, 5, 8]:
-    b.move(move)
-    print("OG:")
+#
+b = Board.blank_board(4, 3, 2)
+for _ in range(30):
+    b.greedy_move()
     b.cli()
-    b.reduce()
-    print("Reduced:")
-    b.cli()
-    print("\n\n")
-
-
+    print("winner:", b.win())
+    print()

@@ -33,24 +33,14 @@ class Game:
         print("Looping in play(); {}s since init; turn {}; {} configs at present".format(time.time() - self.initTime,
                                                                                          self.turn, len(self.boards)))
         for board in self.boards:
-            # board.print_2d()
-            if board.win():
-                # statistic tracking
+            win = board.win()
+            if win:
                 self.leaf_count += 1
-                self.player_wins[(self.turn - 1) % self.q] += 1
+                self.player_wins[win] += 1
                 # actual functionality
-                winner = self.players[(self.turn - 1) % self.q]
+                winner = self.players[win]
                 losers = self.players[:]
                 losers.remove(winner)
-                if winner:
-                    winner.reward(board)
-                perfect_loser = True  # flag to see if the victory was against perfect play
-                for loser in losers:
-                    if loser:
-                        perfect_loser = False  # if any losing player was deterministic, we have proven nothing
-                        loser.punish(board)
-                if perfect_loser and winner:  # if a single winning strategy exists against perfect play
-                    pass  # placeholder; need significant reward for Player
             elif self.turn == self.p:  # board is full; number of turns elapsed == total number of positions
                 self.leaf_count += 1
                 self.draw_count += 1

@@ -69,6 +69,7 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
 
     def reduce(self):
         self.positions = reduce_(self.positions, self.mappings, self.num_pos)
+        return self
 
     def equals(self, other):
         return (other.positions == self.positions).all()
@@ -84,12 +85,15 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
             index = random.randint(0, self.num_pos - 1)
             if self.positions[index] == 0:
                 self.move(index)
+                return self
             else:
                 self.rand_move(recursed + 1)
+                return self
         else:
             for index in range(self.num_pos):
                 if self.positions[index] == 0:
-                    return index
+                    self.move(index)
+                    return self
             raise ValueError("No random move is possible on a full board.")
 
     def greedy_move(self):
@@ -104,6 +108,7 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
                     best_move = move
                     best_score = reward
         self.move(best_move)
+        return self
 
     def move_available(self, index):
         return self.positions[index] == 0
@@ -124,6 +129,9 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
         for k, v in self.__dict__.items():
             setattr(result, k, deepcopy(v, memo))
         return result
+
+    def __str__(self):
+        return "%d**%d Board:" % (self.n, self.k) + str(self.positions)
 
     def cli(self):
         if self.k == 2:
@@ -187,8 +195,53 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
             print("Please try again:")
             self.human_move()
             return
-        print(choice)
         self.move(choice)
+        return self
+
+    def guided_tree(self, guide, player_no):
+        """
+        Perform guided tree search on the board, starting at the current state.
+        :param guide: what algorithm/heuristic chooses moves to guide the tree
+        :param player_no:
+        """
+        startTime = time.time()
+        if guide not in ['human', 'random', 'greedy']:
+            raise ValueError("Tree guide must be one of: 'human'; 'random'; 'greedy'.")
+        win_count = {i: 0 for i in range(self.q + 1)}  # win_count[0] counts draws
+        leaf_count = 0
+        states = {deepcopy(self)}
+        children = set()
+        while states:
+            for parent in states:
+                winner = parent.win()
+                if winner:
+                    if winner != player_no:
+                        print("Player lost:")
+                        parent.cli()
+                    win_count[winner] += 1
+                    leaf_count += 1
+                elif parent.draw():
+                    win_count[0] += 1
+                    leaf_count += 1
+                else:
+                    # produce children; all at unguided transitions, else consult oracle
+                    if (parent.turn % parent.q) + 1 == player_no:
+                        if guide == 'human':
+                            children.update({parent.human_move()})
+                        elif guide == 'greedy':
+                            children.update({parent.greedy_move()})
+                        elif guide == 'random':
+                            children.update({parent.rand_move()})
+                    else:
+                        children.update(parent.successors())
+            states = children.copy()
+            children = set()
+        print("Exhausted all configurations in {} seconds.".format(time.time() - startTime))
+        print("Leaf count: {}".format(leaf_count))
+        print("Draw count: {}".format(win_count[0]))
+        for player in range(1, self.q + 1):
+            print("Wins for player {}: {}".format(player, win_count[player]))
+            print("Losses for player {}: {}".format(player, leaf_count - win_count[0] - win_count[player]))
 
 
 def generate_lines(n, k):
@@ -351,8 +404,9 @@ def reward_(n, k, q, positions, lines, num_pos, symbol, num_lines):
             opponent_excl = np.logical_or(symbolSums[blocker] != 0, opponent_excl)
         opponent_incl = np.logical_and(np.logical_not(opponent_excl), symbolSums[opponent])
         minus += (1 / (n - symbolSums[opponent][opponent_incl])).sum()
-    return plus - minus #(minus / (q - 1))
+    return plus - minus  # (minus / (q - 1))
     """ comment in report - enforcing the game is zero-sum yields quite poor play"""
+
 
 # return Q if player Q has a winning line (if more than one player has a winning line, the lowest-number player is
 # returned); returns 0 if not a winning configuration
@@ -364,10 +418,7 @@ def win_(n, k, q, positions, lines, num_pos, num_lines):
             return player
     return 0
 
-#
-b = Board.blank_board(4, 3, 2)
-for _ in range(30):
-    b.greedy_move()
-    b.cli()
-    print("winner:", b.win())
-    print()
+
+b = Board.blank_board(3, 2, 2)
+print(b)
+b.guided_tree('greedy', 2)

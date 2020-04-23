@@ -107,35 +107,8 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
     def move_available(self, index):
         return self.positions[index] == 0
 
-    def reward(self, symbol):
-        if self.win(symbol):
-            return self.num_lines * self.num_pos  # in excess of the maximum possible cumulative reward from *not* winning
-        symbolSums = [(self.positions[self.lines] == i).sum(axis=1) for i in range(self.q + 1)]
-        blockers = [i for i in range(self.q + 1) if i not in [0, symbol]]
-        if any([self.win(blocker) for blocker in blockers]):
-            return -1 * self.num_lines * self.num_pos
-        # print("Blockers for %d:" % symbol, blockers)
-        excl = np.zeros(self.num_lines)
-        for blocker in blockers:
-            excl = np.logical_or(symbolSums[blocker], excl)
-        # print("lines:", self.lines)
-        # print("excl:", excl)
-        incl = np.logical_and(np.logical_not(excl), symbolSums[symbol])
-        # print("incl:", incl)
-        plus = (1 / (self.n - symbolSums[symbol][incl])).sum()
-        # print("plus:", plus)
-        minus = 0
-        for opponent in blockers:
-            # print("Calculating for opponent", opponent)
-            opponent_blockers = [i for i in range(self.q + 1) if i not in [0, opponent]]
-            opponent_excl = np.zeros(self.num_lines)
-            for blocker in opponent_blockers:
-                opponent_excl = np.logical_or(symbolSums[blocker], opponent_excl)
-            opponent_incl = np.logical_and(np.logical_not(opponent_excl), symbolSums[opponent])
-            minus += (1 / (self.n - symbolSums[opponent][opponent_incl])).sum()
-        # print("cls - Symbol: %3f; Minus: %3f; Plus: %3f" % (symbol, minus, plus))
-        # print("pre-return plus:", plus)
-        return plus - (minus / (self.q - 1))
+    def reward(self, symbol, accelerate=True):
+        return reward_(self.n, self.k, self.q, self.positions, self.lines, self.num_pos, symbol, self.num_lines)
 
     def __copy__(self):  # https://stackoverflow.com/a/15774013/12387665
         cls = self.__class__
@@ -364,65 +337,45 @@ def reward_(n, k, q, positions, lines, num_pos, symbol, num_lines):
             opponent_excl = np.logical_or(symbolSums[blocker] != 0, opponent_excl)
         opponent_incl = np.logical_and(np.logical_not(opponent_excl), symbolSums[opponent])
         minus += (1 / (n - symbolSums[opponent][opponent_incl])).sum()
-    # print("acc - Symbol: " + str(symbol) + "; Minus: " + str(minus) + "; Plus: " + str(plus))
-    # print("acc; minus-plus-symbol:")
-    # print(minus)
-    # print(plus)
-    # print(symbol)
     return plus - (minus / (q - 1))
 
 
-b = Board.blank_board(3, 2, 3)
-b.move(0)
-b.move(2)
-b.move(3)
-b.move(8)
+# return Q if player Q has a winning line (if more than one player has a winning line, the lowest-number player is
+# returned); returns 0 if not a winning configuration
+@jit(nopython=True)
+def win_(n, k, q, positions, lines, num_pos, num_lines):
+    symbolSums = [(positions.take(lines) == i).sum(axis=1, dtype=np.int16) for i in range(q + 1)]
+    for player in range(1, q+1):
+        if np.any(symbolSums[player] == n): #if player controls n cells in a row
+            return player
+    return 0
 
-print("\n\n\n\n")
-b.cli()
-for player in [3]:
-    inClass = b.reward(player)
-    accVal = reward_(b.n, b.k, b.q, b.positions, b.lines, b.num_pos, player, b.num_lines)
-    print("board.reward(%d): %f" % (player, inClass))
-    print("reward_(board, player = %d, ...): %f" % (player, accVal))
-    print()
+
+b = Board.blank_board(3, 3, 3)
+for move in [0,1,3,2,4,6,7,5,8]:
+    b.move(move)
+    win = win_(b.n, b.k, b.q, b.positions, b.lines, b.num_pos, b.num_lines)
+    b.cli()
+    print("Moved:", move, "; win:", win)
+
+
+
+reps = 1e4
+a = 0
+s = time.time()
+for _ in range(int(reps)):
+    win = win_(b.n, b.k, b.q, b.positions, b.lines, b.num_pos, b.num_lines)
+    a += win
+e = time.time()
+
+print(e-s, a, "numba")
 
 a = 0
 s = time.time()
-for _ in range(int(1e4)):
-    for player in [1,2,3]:
-        a += b.reward(player)
+for _ in range(int(reps)):
+    win = b.win(1)
+    a += win
 e = time.time()
-print("Non-acc time taken: ", e-s, "secs.")
-a = 0
-s = time.time()
-for _ in range(int(1e4)):
-    for player in [1,2,3]:
-        a += reward_(b.n, b.k, b.q, b.positions, b.lines, b.num_pos, player, b.num_lines)
-e = time.time()
-print("Acc time taken: ", e-s, "secs.")
 
 
-# for _ in range(10):
-#     b.rand_move()
-#     b.cli()
-#     for i in range(1, 4):
-#         print(i, b.reward(i))
-#
-# reps = int(1e4)
-# s = time.time()
-# for _ in range(reps):
-#     for i in range(1, 4):
-#         b.reward(i)
-# e = time.time()
-# print('time for %d reward calculations: %f' % (reps, e - s))
-# for _ in range(16):
-#     print("Move")
-#     b.rand_move()
-#     b.cli()
-#     print("positions", b.positions)
-#     print("\n\n")
-#     print("1", b.win(1))
-#     print("2", b.win(2))
-#     print("3", b.win(3))
-# i = 0
+print(e-s, a, "old")

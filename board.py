@@ -50,13 +50,7 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
 
     # consider refactoring to only consider whether the *last* move is a part of a win
     def win(self, symbol):
-        for line in self.lines:
-            line_win = True
-            for index in line:
-                line_win = line_win and self.positions[index] == symbol
-            if line_win:
-                return True
-        return False
+        return win_(self.n, self.k, self.q, self.positions, self.lines, self.num_pos, self.num_lines)
 
     def move(self, position):  # return a copy of the config, with the move added
         if self.positions[position] == 0:  # illegal move are ignored, turn incremented and player loses their move
@@ -74,13 +68,7 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
         return clone_board
 
     def reduce(self):
-        best = self.positions
-        for mapping in self.mappings:
-            candidate = self.positions[mapping]
-            if arr_lt(candidate, best, self.num_pos):
-                best = candidate
-        self.positions = best
-        return self
+        self.positions = reduce_(self.positions, self.mappings, self.num_pos)
 
     def equals(self, other):
         return (other.positions == self.positions).all()
@@ -285,7 +273,7 @@ def generate_transforms(n, k):
                 if temp_tf not in collection:
                     collection.append(temp_tf)
                     collection_grew = True
-    return [np.array(transform) for transform in collection]
+    return np.array([np.array(transform) for transform in collection])
 
 
 def apply_transform(base, transform, num_pos):
@@ -301,6 +289,7 @@ def fast_transform(base, transform):
     return base[transform]
 
 
+@jit(nopython=True)
 def arr_lt(arr1, arr2, num_pos):
     """
     :param arr1: an n**k integer array
@@ -313,6 +302,18 @@ def arr_lt(arr1, arr2, num_pos):
         if arr2[i] < arr1[i]:
             return False
     return False
+
+
+@jit(nopython=True)
+def reduce_(positions, mappings, num_pos):
+    best = positions
+    for mapping_index in range(mappings.shape[0]):
+        mapping = mappings[mapping_index]
+        candidate = positions[mapping]
+        if arr_lt(candidate, best, num_pos):
+            best = candidate
+    positions = best
+    return positions
 
 
 @jit(nopython=True)
@@ -345,37 +346,20 @@ def reward_(n, k, q, positions, lines, num_pos, symbol, num_lines):
 @jit(nopython=True)
 def win_(n, k, q, positions, lines, num_pos, num_lines):
     symbolSums = [(positions.take(lines) == i).sum(axis=1, dtype=np.int16) for i in range(q + 1)]
-    for player in range(1, q+1):
-        if np.any(symbolSums[player] == n): #if player controls n cells in a row
+    for player in range(1, q + 1):
+        if np.any(symbolSums[player] == n):  # if player controls n cells in a row
             return player
     return 0
 
 
-b = Board.blank_board(3, 3, 3)
-for move in [0,1,3,2,4,6,7,5,8]:
+b = Board.blank_board(3, 2, 3)
+for move in [0, 1, 3, 2, 4, 6, 7, 5, 8]:
     b.move(move)
-    win = win_(b.n, b.k, b.q, b.positions, b.lines, b.num_pos, b.num_lines)
+    print("OG:")
     b.cli()
-    print("Moved:", move, "; win:", win)
+    b.reduce()
+    print("Reduced:")
+    b.cli()
+    print("\n\n")
 
 
-
-reps = 1e4
-a = 0
-s = time.time()
-for _ in range(int(reps)):
-    win = win_(b.n, b.k, b.q, b.positions, b.lines, b.num_pos, b.num_lines)
-    a += win
-e = time.time()
-
-print(e-s, a, "numba")
-
-a = 0
-s = time.time()
-for _ in range(int(reps)):
-    win = b.win(1)
-    a += win
-e = time.time()
-
-
-print(e-s, a, "old")

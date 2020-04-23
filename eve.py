@@ -6,11 +6,11 @@ import numpy as np
 from board import Board
 
 
-def play(num_games, n, k):
+def play(num_games, n, k, q):
     brain0 = Agent(gamma=0.99, epsilon=1.0, batch_size=64, n_actions=n**k,
-                   input_dims=[n**k], alpha=0.003, eps_end=0.005, eps_dec=0.9999)
+                   num_pos=n ** k, alpha=0.003, eps_end=0.005, eps_dec=0.9999, q=q)
     brain1 = Agent(gamma=0.99, epsilon=1.0, batch_size=64, n_actions=n**k,
-                   input_dims=[n**k], alpha=0.003, eps_end=0.005, eps_dec=0.9909)
+                   num_pos=n**k, alpha=0.003, eps_end=0.005, eps_dec=0.9909, q=q)
     scores0 = []
     scores1 = []
     eps_history = []
@@ -29,7 +29,7 @@ def play(num_games, n, k):
         #     print('episode: ', i, 'score0: ', score0, 'score1: ', score1)
         eps_history.append(brain0.EPSILON)
         done = False
-        board = Board.blank_board(n, k)
+        board = Board.blank_board(n, k, q)
         score = 0
         action0, action1 = -1, -1
         # set actions to values >= 0 as each player gets their first move; can add a test for large 1 inside while-loop
@@ -40,7 +40,7 @@ def play(num_games, n, k):
             # print(last_observation0)
             action0 = brain0.chooseAction(last_observation0)
             board.move(action0)
-            win0 = board.win(1)  # bool on whether win for X
+            win0 = board.win() == 1  # bool on whether win for X
             draw = board.draw()
             if win0:
                 brain0.storeTransition(last_observation0, action0, 5, board.to_linear_array(), True)
@@ -95,3 +95,5 @@ def play(num_games, n, k):
     # brain.save_model(modelname)
 
 
+
+play(1000, 3, 2, 3)

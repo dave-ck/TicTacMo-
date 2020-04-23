@@ -1,4 +1,4 @@
-# https://github.com/philtabor/Youtube-Code-Repository/tree/master/ReinforcementLearning/DeepQLearning
+# adapted from https://github.com/philtabor/Youtube-Code-Repository/tree/master/ReinforcementLearning/DeepQLearning
 import time
 import torch as T
 import torch.nn as nn
@@ -7,15 +7,16 @@ import torch.optim as optim
 import numpy as np
 
 class DeepQNetwork(nn.Module):
-    def __init__(self, ALPHA, input_dims, fc1_dims, fc2_dims,
-                 n_actions):
+    def __init__(self, ALPHA, num_pos, fc1_dims, fc2_dims,
+                 n_actions, q):
         super(DeepQNetwork, self).__init__()
-        self.input_dims = input_dims
+        self.q = q
+        self.num_pos = num_pos
         self.fc1_dims = fc1_dims
         self.fc2_dims = fc2_dims
         self.n_actions = n_actions
         self.alpha = ALPHA
-        self.fc1 = nn.Linear(*self.input_dims, self.fc1_dims)
+        self.fc1 = nn.Linear(self.num_pos*(self.q+1), self.fc1_dims)
         self.fc2 = nn.Linear(self.fc1_dims, self.fc2_dims)
         self.fc3 = nn.Linear(self.fc2_dims, self.n_actions)
         self.optimizer = optim.Adam(self.parameters(), lr=ALPHA)
@@ -24,10 +25,16 @@ class DeepQNetwork(nn.Module):
         self.to(self.device)
 
     def forward(self, observation):
-        check_nan(observation)
+        # check_nan(observation)
         state = T.Tensor(observation).to(self.device)
-        # observation = observation.view(-1)
-        x = F.relu(self.fc1(state))
+        state = state.to(T.int64)
+        x = nn.functional.one_hot(state, self.q+1)
+        x = x.to(T.float)
+        if x.shape[0] == 64:
+            x = x.flatten(start_dim=1)
+        else:
+            x = x.flatten()
+        x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         actions = self.fc3(x)
         check_nan(actions)
@@ -36,7 +43,7 @@ class DeepQNetwork(nn.Module):
 
 
 class Agent(object):
-    def __init__(self, gamma, epsilon, alpha, input_dims, batch_size, n_actions,
+    def __init__(self, gamma, epsilon, alpha, num_pos, batch_size, n_actions, q,
                  max_mem_size=100000, eps_end=0.01, eps_dec=0.996):
         self.GAMMA = gamma
         self.EPSILON = epsilon
@@ -49,9 +56,9 @@ class Agent(object):
         self.batch_size = batch_size
         self.mem_cntr = 0
         self.Q_eval = DeepQNetwork(alpha, n_actions=self.n_actions,
-                                   input_dims=input_dims, fc1_dims=2048, fc2_dims=2048)
-        self.state_memory = np.zeros((self.mem_size, *input_dims))
-        self.new_state_memory = np.zeros((self.mem_size, *input_dims))
+                                   num_pos=num_pos, fc1_dims=2048, fc2_dims=2048, q=q)
+        self.state_memory = np.zeros((self.mem_size, num_pos))
+        self.new_state_memory = np.zeros((self.mem_size, num_pos))
         self.action_memory = np.zeros((self.mem_size, self.n_actions),
                                       dtype=np.uint8)
         self.reward_memory = np.zeros(self.mem_size)

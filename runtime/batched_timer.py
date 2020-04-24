@@ -157,6 +157,7 @@ rects6 = ax.bar(ind + width * 2.5, py_acc_times, width,
 ax.set_ylabel('Runtime (milliseconds)')
 ax.set_title('Runtime by implementation and batch size for 65536 total "gather"s')
 ax.set_xticks(ind)
+ax.set_yticks([])
 ax.set_xticklabels(batch_sizes)
 ax.set_xlabel('Batch size')
 ax.legend()

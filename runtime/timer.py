@@ -190,8 +190,9 @@ rects8 = ax.bar(ind + width * 3.5, precast_c_times, width,
 
 # Add some text for labels, title and custom x-axis tick labels, etc.
 ax.set_ylabel('Runtime (milliseconds)')
-ax.set_title('Runtime by implementation for performing "gather" 2**16 times')
+ax.set_title('Runtime by implementation adn array size for 65536 "gather"s')
 ax.set_xticks(ind)
+ax.set_yticks([])
 ax.set_xticklabels(pos_nums)
 ax.set_xlabel('Array size')
 ax.legend()

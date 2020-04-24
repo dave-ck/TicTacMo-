@@ -30,7 +30,7 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
 
     def reset(self):
         self.turn = 0
-        self.positions = [0 for _ in range(self.num_pos)]
+        self.positions = np.zeros(self.num_pos, dtype=np.int64)
 
     def successors(self):  # Cimpl with isomorphism checks
         """
@@ -429,6 +429,6 @@ def win_(n, k, q, positions, lines, num_pos, num_lines):
     return 0
 
 
-b = Board.blank_board(4, 3, 2)
-print(b)
-b.guided_tree('greedy', 1)
+# b = Board.blank_board(3, 2, 3)
+# print(b)
+# b.guided_tree('greedy', 1)

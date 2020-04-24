@@ -23,7 +23,7 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
     @classmethod
     def blank_board(cls, n, k, q):
         num_pos = n ** k
-        positions = np.zeros(num_pos)
+        positions = np.zeros(num_pos, dtype=np.int64)
         lines = generate_lines(n, k)
         mappings = generate_transforms(n, k)
         return cls(n, k, q, num_pos, positions, lines, mappings, turn=0)
@@ -78,7 +78,7 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
         return 0 not in self.positions
 
     def to_linear_array(self):
-        return np.array(self.positions, dtype='int64')
+        return self.positions
 
     def rand_move(self, recursed=0):
         if recursed < 100:
@@ -211,7 +211,10 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
         leaf_count = 0
         states = {deepcopy(self)}
         children = set()
+        depth = 0
         while states:
+            depth += 1
+            print("At depth: %d; active nodes: %d" % (depth, len(states)))
             for parent in states:
                 winner = parent.win()
                 if winner:
@@ -236,6 +239,13 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
                         children.update(parent.successors())
             states = children.copy()
             children = set()
+            print("After %dth move: %d active nodes" % (depth, len(states)))
+            print("Leaf count: {}".format(leaf_count))
+            print("Draw count: {}".format(win_count[0]))
+            for player in range(1, self.q + 1):
+                print("Wins for player {}: {}".format(player, win_count[player]))
+                print("Losses for player {}: {}".format(player, leaf_count - win_count[0] - win_count[player]))
+            print("\n\n")
         print("Exhausted all configurations in {} seconds.".format(time.time() - startTime))
         print("Leaf count: {}".format(leaf_count))
         print("Draw count: {}".format(win_count[0]))
@@ -419,6 +429,6 @@ def win_(n, k, q, positions, lines, num_pos, num_lines):
     return 0
 
 
-b = Board.blank_board(3, 2, 2)
+b = Board.blank_board(4, 3, 2)
 print(b)
-b.guided_tree('greedy', 2)
+b.guided_tree('greedy', 1)

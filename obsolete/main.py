@@ -1,5 +1,5 @@
 from obsolete.board_naive import Board
-from obsolete.game import Game
+from game import Game
 from obsolete.player import Randy
 from obsolete.phils_dq import TF_Player, Agent
 from obsolete.phils_utils import plotLearning

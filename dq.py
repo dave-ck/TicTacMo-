@@ -6,6 +6,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
 
+
 class DeepQNetwork(nn.Module):
     def __init__(self, ALPHA, num_pos, fc1_dims, fc2_dims,
                  n_actions, q):
@@ -16,7 +17,7 @@ class DeepQNetwork(nn.Module):
         self.fc2_dims = fc2_dims
         self.n_actions = n_actions
         self.alpha = ALPHA
-        self.fc1 = nn.Linear(self.num_pos*(self.q+1), self.fc1_dims)
+        self.fc1 = nn.Linear(self.num_pos * (self.q + 1), self.fc1_dims)
         self.fc2 = nn.Linear(self.fc1_dims, self.fc2_dims)
         self.fc3 = nn.Linear(self.fc2_dims, self.n_actions)
         self.optimizer = optim.Adam(self.parameters(), lr=ALPHA)
@@ -28,7 +29,7 @@ class DeepQNetwork(nn.Module):
         # check_nan(observation)
         state = T.Tensor(observation).to(self.device)
         state = state.to(T.int64)
-        x = nn.functional.one_hot(state, self.q+1)
+        x = nn.functional.one_hot(state, self.q + 1)
         x = x.to(T.float)
         if x.shape[0] == 64:
             x = x.flatten(start_dim=1)
@@ -39,7 +40,6 @@ class DeepQNetwork(nn.Module):
         actions = self.fc3(x)
         check_nan(actions)
         return actions
-
 
 
 class Agent(object):
@@ -129,6 +129,7 @@ class TF_Player(object):
             p2 = path[path.index(param) + len(param):]
             p3 = p2[:p2.index("_")]
             return p3
+
         player_num = int(get_param(path, "p"))
         q = int(get_param(path, "q"))
         n = int(get_param(path, "n"))
@@ -150,6 +151,7 @@ class TF_Player(object):
         actions = actions.masked_fill(T.tensor(taken, device=self.Q_eval.device), -np.inf)
         action = T.argmax(actions).item()
         return action
+
 
 def check_nan(tensor_or_array):
     if type(tensor_or_array) is np.ndarray:

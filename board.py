@@ -48,8 +48,11 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
             successors.add(successor)  # otherwise just empties entire collection
         return successors
 
-    # consider refactoring to only consider whether the *last* move is a part of a win
     def win(self):
+        """
+
+        :return: number of winning player if some player wins; -1 if a draw; 0 otherwise
+        """
         return win_(self.n, self.k, self.q, self.positions, self.lines, self.num_pos, self.num_lines)
 
     def move(self, position):  # return a copy of the config, with the move added
@@ -113,7 +116,7 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
     def move_available(self, index):
         return self.positions[index] == 0
 
-    def reward(self, symbol, accelerate=True):
+    def reward(self, symbol):
         return reward_(self.n, self.k, self.q, self.positions, self.lines, self.num_pos, symbol, self.num_lines)
 
     def __copy__(self):  # https://stackoverflow.com/a/15774013/12387665
@@ -426,9 +429,11 @@ def win_(n, k, q, positions, lines, num_pos, num_lines):
     for player in range(1, q + 1):
         if np.any(symbolSums[player] == n):  # if player controls n cells in a row
             return player
+    if (positions != 0).all(): # if board is full, draw
+        return -1
     return 0
 
-
-# b = Board.blank_board(3, 2, 3)
+#
+# b = Board.blank_board(4, 2, 3)
 # print(b)
 # b.guided_tree('greedy', 1)

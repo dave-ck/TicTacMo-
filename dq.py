@@ -60,7 +60,7 @@ class Agent(object):
         self.mem_size = max_mem_size
         self.batch_size = batch_size
         self.mem_cntr = 0
-        self.zero_long = T.zeros([1], dtype=T.long)
+        self.zero_long = T.zeros([1], dtype=T.long, device='cuda')
         self.Q_eval = DeepQNetwork(alpha, n_actions=self.n_actions,
                                    num_pos=num_pos, fc1_dims=2048, fc2_dims=2048, q=q)
         self.state_memory = np.zeros((self.mem_size, num_pos))
@@ -144,11 +144,15 @@ actions = fwded / fwded.sum()
 print(actions)
 cumprobs = actions.cumsum(0)
 print(cumprobs)
-reps = int(1e4)
+reps = int(1e3)
 start = time.time()
 z = T.tensor([0], device='cuda')
+l = []
 for _ in range(reps):
     r = np.random.random()
-    a = (cumprobs > r).nonzero().take(z)
+    a = (cumprobs > r).nonzero().take(z).item()
+    l.append(a)
 end = time.time()
 print(end- start)
+for i in range(9):
+    print("occurences of", i, ":", l.count(i), fwded[i])

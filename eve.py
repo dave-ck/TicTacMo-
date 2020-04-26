@@ -126,10 +126,6 @@ def play_trainee(num_games, n, k, q, trainee_number):
             brain.learn()
             scores[player].append(board.reward(player))
     x = [i + 1 for i in range(num_games)]
-    # filename = "tmp/" + str(env.n) + "n" + str(env.k) + "k" + str(num_games) + 'Games' + 'Gamma' + str(brain.GAMMA) + \
-    #            'Alpha' + str(brain.ALPHA) + 'Memory' + \
-    #            str(brain.Q_eval.fc1_dims) + '-' + str(brain.Q_eval.fc2_dims) + '.png'
-    # todo: update when player turn implemented
     plotLearning(x, scores, eps_history, "./tmp/{ng}games_player{p}_of{q}_n{n}_k{k}.png".format(q=q, p=trainee_number,
                                                                                                 ng=num_games, n=n, k=k))
     brain.save_model("models/%dgames_%dn_%dk_%dq_player%d.pth" % (num_games, n, k, q, trainee_number))

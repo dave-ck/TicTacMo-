@@ -5,11 +5,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
-from board import Board
 
 
 class DeepQNetwork(nn.Module):
-    def __init__(self, ALPHA, num_pos, fc1_dims, fc2_dims,
+    def __init__(self, alpha, num_pos, fc1_dims, fc2_dims,
                  n_actions, q):
         super(DeepQNetwork, self).__init__()
         self.q = q
@@ -17,11 +16,11 @@ class DeepQNetwork(nn.Module):
         self.fc1_dims = fc1_dims
         self.fc2_dims = fc2_dims
         self.n_actions = n_actions
-        self.alpha = ALPHA
+        self.alpha = alpha
         self.fc1 = nn.Linear(self.num_pos * (self.q + 1), self.fc1_dims)
         self.fc2 = nn.Linear(self.fc1_dims, self.fc2_dims)
         self.fc3 = nn.Linear(self.fc2_dims, self.n_actions)
-        self.optimizer = optim.Adam(self.parameters(), lr=ALPHA)
+        self.optimizer = optim.Adam(self.parameters(), lr=alpha)
         self.loss = nn.MSELoss()
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cuda:1')
         self.to(self.device)
@@ -85,7 +84,7 @@ class Agent(object):
         rand = np.random.random()
         if rand > self.EPSILON:
             actions = self.Q_eval.forward(observation)
-            taken = observation == 0  # todo: apply to probabilistic move choice
+            taken = observation != 0
             actions = actions.masked_fill(T.tensor(taken, device=self.Q_eval.device), -np.inf)
             action = T.argmax(actions).item()
         else:

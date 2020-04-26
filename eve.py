@@ -8,43 +8,47 @@ from board import Board
 
 def play(num_games, n, k, q):
     brains = {
-    i: Agent(gamma=0.99, epsilon=1.0, batch_size=64, n_actions=n ** k, num_pos=n ** k, alpha=0.003, eps_end=0.005,
-             eps_dec=0.9999, q=q) for i in range(1, q + 1)}
+        i: Agent(gamma=0.99, epsilon=1.0, batch_size=64, n_actions=n ** k, num_pos=n ** k, alpha=0.003, eps_end=0.005,
+                 eps_dec=0.9999, q=q) for i in range(1, q + 1)}
     scores = {i: [] for i in range(1, q + 1)}
     eps_history = []
     board = Board.blank_board(n, k, q)
     for i in range(num_games):
         if i % 40 == 0 and i > 0:
             out = 'episode: %d' % i
-            for player in range(1, q+1):
+            for player in range(1, q + 1):
                 avg_score = np.mean(scores[player][max(0, i - 40):(i + 1)])
                 out += '; average score[%d]: %.3f' % (player, avg_score)
             out += '; epsilon: %.3f' % brains[1].EPSILON
             print(out)
+        # else:
+        #     print("Game %d; Epsilon @ %.5f" % (i, brains[1].EPSILON))
         eps_history.append(brains[1].EPSILON)
         board.reset()
-        action0, action1 = -1, -1
         # set actions to values >= 0 as each player gets their first move; can add a test for large 1 inside while-loop
-        last_seen = {i: board.to_linear_array() for i in range(1, q+1)}
-        last_move = {i: -1 for i in range(1, q+1)}
+        last_seen = {i: board.to_linear_array() for i in range(1, q + 1)}
+        last_move = {i: -1 for i in range(1, q + 1)}
         winner = board.win()
-        while not winner: # during play
+        while not winner:  # during play
             player = (board.turn % board.q) + 1
             current_obs = board.to_linear_array()
-            if last_move[player] != -1: # if player has moved
-                brains[player].storeTransition(last_seen[player], last_move[player], board.reward(player), current_obs, False)
+            if last_move[player] != -1:  # if player has moved
+                brains[player].storeTransition(last_seen[player], last_move[player],
+                                               board.reward(player, offense_scaling=0.1, defense_scaling=1),
+                                               current_obs, False)
                 brains[player].learn()
             action = brains[player].chooseAction(current_obs)
             last_seen[player] = current_obs
+            last_move[player] = action
             board.move(action)
-            if i % 10000 == 0:
+            if i > 0 and i % 240 == 0:
                 print("After move %d:" % board.turn)
                 board.cli()
                 print("\n\n")
             winner = board.win()
-        if i % 10000 == 0:
+        if i > 0 and i % 240 == 0:
             print("Winner: %d" % winner)
-        for player in range(1, q+1): # after the game has ended, all players learn
+        for player in range(1, q + 1):  # after the game has ended, all players learn
             current_obs = board.to_linear_array()
             if last_move[player] != -1:  # if player has moved
                 brains[player].storeTransition(last_seen[player], last_move[player], board.reward(player), current_obs,
@@ -61,7 +65,8 @@ def play(num_games, n, k, q):
     #             alpha=brain.Q_eval.alpha)
     plotLearning(x, scores[1], eps_history, "./tmp/{ng}brain0_n{n}_k{k}.png".format(ng=num_games, n=n, k=k))
     plotLearning(x, scores[2], eps_history, "./tmp/{ng}brain1_n{n}_k{k}.png".format(ng=num_games, n=n, k=k))
-    # brain.save_model(modelname)
+    for i in range(1, q + 1):
+        brains[i].save_model("models/5k_one_hot_player_%d.pth" % i)
 
 
-play(10000, 4, 3, 2)
+play(10001, 3, 2, 2)

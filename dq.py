@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
+from board import Board
 
 
 class DeepQNetwork(nn.Module):
@@ -31,15 +32,19 @@ class DeepQNetwork(nn.Module):
         state = state.to(T.int64)
         x = nn.functional.one_hot(state, self.q + 1)
         x = x.to(T.float)
-        if x.shape[0] == 64:
+        # print("unflattened", x.shape)
+        # print(x)
+        if len(x.shape) == 3:  # if we are processing a batch
             x = x.flatten(start_dim=1)
         else:
             x = x.flatten()
+        # print("x_shape", x.shape)
+        # print(x)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         actions = self.fc3(x)
-        check_nan(actions)
-        return actions
+        norm_actions = actions / actions.sum()
+        return norm_actions
 
 
 class Agent(object):
@@ -55,6 +60,7 @@ class Agent(object):
         self.mem_size = max_mem_size
         self.batch_size = batch_size
         self.mem_cntr = 0
+        self.zero_long = T.zeros([1], dtype=T.long)
         self.Q_eval = DeepQNetwork(alpha, n_actions=self.n_actions,
                                    num_pos=num_pos, fc1_dims=2048, fc2_dims=2048, q=q)
         self.state_memory = np.zeros((self.mem_size, num_pos))
@@ -75,13 +81,16 @@ class Agent(object):
         self.terminal_memory[index] = 1 - terminal
         self.mem_cntr += 1
 
-    def chooseAction(self, observation):
+    def chooseAction(self, observation, probabilistic = True):
         rand = np.random.random()
         if rand > self.EPSILON:
             actions = self.Q_eval.forward(observation)
-            taken = np.vectorize(bool)(observation)
-            actions = actions.masked_fill(T.tensor(taken, device=self.Q_eval.device), -np.inf)
-            action = T.argmax(actions).item()
+            if probabilistic:
+                action = (actions > r).nonzero().take(self.zero_long).item() # choose probabilistically
+            else:
+                taken = np.vectorize(bool)(observation)
+                actions = actions.masked_fill(T.tensor(taken, device=self.Q_eval.device), -np.inf)
+                action = T.argmax(actions).item()
         else:
             options = np.where(observation == 0)[0]
             action = np.random.choice(options)  # choose a random empty cell
@@ -111,9 +120,7 @@ class Agent(object):
             batch_index = np.arange(self.batch_size, dtype=np.int32)
             action_indices = [int(action_indices[i]) for i in range(len(action_indices))]  # todo: WHY????
             q_target[batch_index, action_indices] = reward_batch + self.GAMMA * T.max(q_next, dim=1)[0] * terminal_batch
-
             self.EPSILON = self.EPSILON * self.EPS_DEC if self.EPSILON > self.EPS_MIN else self.EPS_MIN
-
             loss = self.Q_eval.loss(q_target, q_eval).to(self.Q_eval.device)
             loss.backward()
             self.Q_eval.optimizer.step()
@@ -123,42 +130,25 @@ class Agent(object):
         print("Saved model to", path)
 
 
-class TF_Player(object):
-    def __init__(self, path):
-        def get_param(path, param):
-            p2 = path[path.index(param) + len(param):]
-            p3 = p2[:p2.index("_")]
-            return p3
-
-        player_num = int(get_param(path, "p"))
-        q = int(get_param(path, "q"))
-        n = int(get_param(path, "n"))
-        k = int(get_param(path, "k"))
-        n_actions = n ** k
-        input_dims = [n_actions]
-        fc1_dims = int(get_param(path, "fc1"))
-        fc2_dims = int(get_param(path, "fc2"))
-        alpha = float(get_param(path, "alpha"))
-        self.Q_eval = DeepQNetwork(alpha, n_actions=n_actions,
-                                   input_dims=input_dims, fc1_dims=fc1_dims, fc2_dims=fc2_dims)
-        self.Q_eval.load_state_dict(T.load(path))
-        self.Q_eval.eval()
-        print("Initialized from saved TF model.")
-
-    def chooseAction(self, observation):
-        actions = self.Q_eval.forward(observation)
-        taken = np.vectorize(bool)(observation)
-        actions = actions.masked_fill(T.tensor(taken, device=self.Q_eval.device), -np.inf)
-        action = T.argmax(actions).item()
-        return action
-
-
-def check_nan(tensor_or_array):
-    if type(tensor_or_array) is np.ndarray:
-        if np.isnan(tensor_or_array).any():
-            raise ValueError("NDArray contains nan:", tensor_or_array)
-    elif type(tensor_or_array) is T.Tensor:
-        if T.isnan(tensor_or_array).any():
-            raise ValueError("Tensor contains nan:", tensor_or_array)
-    else:
-        raise ValueError("Not Tensor or Array:", tensor_or_array)
+alpha = 0.003
+num_pos = 3 ** 2
+q = 2
+model = DeepQNetwork(alpha, n_actions=num_pos,
+                     num_pos=num_pos, fc1_dims=2048, fc2_dims=2048, q=q)
+model.load_state_dict(T.load('models/5k_one_hot_player_1.pth'))
+model.eval()
+b = Board.blank_board(3, 2, 2)
+b.cli()
+fwded = model.forward(b.to_linear_array())
+actions = fwded / fwded.sum()
+print(actions)
+cumprobs = actions.cumsum(0)
+print(cumprobs)
+reps = int(1e4)
+start = time.time()
+z = T.tensor([0], device='cuda')
+for _ in range(reps):
+    r = np.random.random()
+    a = (cumprobs > r).nonzero().take(z)
+end = time.time()
+print(end- start)

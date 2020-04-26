@@ -99,14 +99,14 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
                     return self
             raise ValueError("No random move is possible on a full board.")
 
-    def greedy_move(self):
+    def greedy_move(self, offense_scaling = 1, defense_scaling = 1):
         best_score = np.inf * -1
         best_move = 0
         player_symbol = (self.turn % self.q) + 1
         for move in range(self.num_pos):
             if self.positions[move] == 0:
                 board = self.move_clone(move)
-                reward = board.reward(player_symbol)
+                reward = board.reward(player_symbol, offense_scaling, defense_scaling)
                 if reward > best_score:
                     best_move = move
                     best_score = reward
@@ -116,8 +116,9 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
     def move_available(self, index):
         return self.positions[index] == 0
 
-    def reward(self, symbol):
-        return reward_(self.n, self.k, self.q, self.positions, self.lines, self.num_pos, symbol, self.num_lines)
+    def reward(self, symbol, offense_scaling=1, defense_scaling=1):
+        return reward_(self.n, self.k, self.q, self.positions, self.lines, self.num_pos, symbol, self.num_lines,
+                       offense_scaling, defense_scaling)
 
     def __copy__(self):  # https://stackoverflow.com/a/15774013/12387665
         cls = self.__class__
@@ -221,14 +222,15 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
             for parent in states:
                 winner = parent.win()
                 if winner:
-                    if winner != player_no:
+                    if winner != player_no and winner != -1:
                         print("Player lost:")
                         parent.cli()
-                    win_count[winner] += 1
-                    leaf_count += 1
-                elif parent.draw():
-                    win_count[0] += 1
-                    leaf_count += 1
+                    if winner == -1: # if a draw
+                        win_count[0] += 1
+                        leaf_count += 1
+                    else:
+                        win_count[winner] += 1
+                        leaf_count += 1
                 else:
                     # produce children; all at unguided transitions, else consult oracle
                     if (parent.turn % parent.q) + 1 == player_no:
@@ -396,7 +398,7 @@ def reduce_(positions, mappings, num_pos):
 
 
 @jit(nopython=True)
-def reward_(n, k, q, positions, lines, num_pos, symbol, num_lines):
+def reward_(n, k, q, positions, lines, num_pos, symbol, num_lines, offense_scaling, defense_scaling):
     blockers = [i for i in range(q + 1) if i != 0 and i != symbol]
     symbolSums = [(positions.take(lines) == i).sum(axis=1, dtype=np.int16) for i in range(q + 1)]
     if np.any(symbolSums[symbol] == n):  # if the symbol queried has won
@@ -417,7 +419,7 @@ def reward_(n, k, q, positions, lines, num_pos, symbol, num_lines):
             opponent_excl = np.logical_or(symbolSums[blocker] != 0, opponent_excl)
         opponent_incl = np.logical_and(np.logical_not(opponent_excl), symbolSums[opponent])
         minus += (1 / (n - symbolSums[opponent][opponent_incl])).sum()
-    return plus - minus  # (minus / (q - 1))
+    return plus * offense_scaling - minus * defense_scaling
     """ comment in report - enforcing the game is zero-sum yields quite poor play"""
 
 
@@ -429,11 +431,11 @@ def win_(n, k, q, positions, lines, num_pos, num_lines):
     for player in range(1, q + 1):
         if np.any(symbolSums[player] == n):  # if player controls n cells in a row
             return player
-    if (positions != 0).all(): # if board is full, draw
+    if (positions != 0).all():  # if board is full, draw
         return -1
     return 0
 
-#
-# b = Board.blank_board(4, 2, 3)
+
+# b = Board.blank_board(3, 2, 2)
 # print(b)
-# b.guided_tree('greedy', 1)
+# b.guided_tree('greedy', 2)

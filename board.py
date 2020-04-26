@@ -1,8 +1,12 @@
+import os
+
 import numba
 from numba import jit
 import time
 import random
 import numpy as np
+import torch
+from dq import DeepQNetwork
 from copy import deepcopy
 
 
@@ -19,6 +23,7 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
         self.num_lines = len(self.lines)
         self.mappings = mappings
         self.positions = positions  # 0 for empty, 1 for X (first and odd moves), -1 for O (second and even moves)
+        self.RL_models = {i: None for i in range(1, q + 1)}
 
     @classmethod
     def blank_board(cls, n, k, q):
@@ -99,7 +104,7 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
                     return self
             raise ValueError("No random move is possible on a full board.")
 
-    def greedy_move(self, offense_scaling = 1, defense_scaling = 1):
+    def greedy_move(self, offense_scaling=1, defense_scaling=1):
         best_score = np.inf * -1
         best_move = 0
         player_symbol = (self.turn % self.q) + 1
@@ -115,6 +120,37 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
 
     def move_available(self, index):
         return self.positions[index] == 0
+
+    def rl_move(self):
+        player_symbol = (self.turn % self.q) + 1
+        if not self.RL_models[player_symbol]:
+            model = DeepQNetwork(alpha=0.003, n_actions=self.num_pos, num_pos=self.num_pos, fc1_dims=2048,
+                                 fc2_dims=2048, q=self.q)
+            model_name = ''
+            model_training = 0
+            for mname in os.listdir("./models/"):
+                if "games_%dn_%dk_%dq_player%d.pth" % (self.n, self.k, self.q, player_symbol) in mname:
+                    mtraining = int(mname[:mname.index("games_")])
+                    if mtraining > model_training:
+                        model_name = mname
+                        model_training = mtraining
+            if model_name:
+                model.load_state_dict(torch.load("./models/"+model_name))
+                model.eval()
+                self.RL_models[player_symbol] = model
+            else:
+                raise LookupError("Cannot find a RL model for the specified n, k, q, playerNo! Train one and save it,"
+                                  " then try again.")
+        fwded = self.RL_models[player_symbol].forward(self.to_linear_array())
+        actions = fwded
+        print("fwded:", fwded)
+        taken = (self.to_linear_array() != 0)  # todo: apply to probabilistic move choice
+        print("taken:", taken)
+        actions = actions.masked_fill(torch.tensor(taken, device='cuda'), -np.inf)
+        print("actions:", actions)
+        action = torch.argmax(actions).item()
+        print(action)
+        self.move(action)
 
     def reward(self, symbol, offense_scaling=1, defense_scaling=1):
         return reward_(self.n, self.k, self.q, self.positions, self.lines, self.num_pos, symbol, self.num_lines,
@@ -225,7 +261,7 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
                     if winner != player_no and winner != -1:
                         print("Player lost:")
                         parent.cli()
-                    if winner == -1: # if a draw
+                    if winner == -1:  # if a draw
                         win_count[0] += 1
                         leaf_count += 1
                     else:
@@ -435,7 +471,10 @@ def win_(n, k, q, positions, lines, num_pos, num_lines):
         return -1
     return 0
 
-
-# b = Board.blank_board(3, 2, 2)
-# print(b)
-# b.guided_tree('greedy', 2)
+for _ in range(1):
+    b = Board.blank_board(3, 2, 2)
+    while not b.win():
+        print(b)
+        b.rl_move()
+        b.cli()
+        print()

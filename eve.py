@@ -66,7 +66,7 @@ def play(num_games, n, k, q):
     plotLearning(x, scores[1], eps_history, "./tmp/{ng}brain0_n{n}_k{k}.png".format(ng=num_games, n=n, k=k))
     plotLearning(x, scores[2], eps_history, "./tmp/{ng}brain1_n{n}_k{k}.png".format(ng=num_games, n=n, k=k))
     for i in range(1, q + 1):
-        brains[i].save_model("models/5k_one_hot_player_%d.pth" % i)
+        brains[i].save_model("models/10k_one_hot_probabilistic_player_%d.pth" % i)
 
 
-play(10001, 3, 2, 2)
+play(10002, 3, 2, 2)

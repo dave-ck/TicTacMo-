@@ -43,7 +43,7 @@ class DeepQNetwork(nn.Module):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         actions = self.fc3(x)
-        norm_actions = actions / actions.sum()
+        norm_actions = actions
         return norm_actions
 
 
@@ -81,16 +81,27 @@ class Agent(object):
         self.terminal_memory[index] = 1 - terminal
         self.mem_cntr += 1
 
-    def chooseAction(self, observation, probabilistic = True):
+    def chooseAction(self, observation, probabilistic=True):
         rand = np.random.random()
         if rand > self.EPSILON:
             actions = self.Q_eval.forward(observation)
-            if probabilistic:
-                action = (actions > r).nonzero().take(self.zero_long).item() # choose probabilistically
-            else:
-                taken = np.vectorize(bool)(observation)
-                actions = actions.masked_fill(T.tensor(taken, device=self.Q_eval.device), -np.inf)
-                action = T.argmax(actions).item()
+            taken = observation == 0  # todo: apply to probabilistic move choice
+            actions = actions.masked_fill(T.tensor(taken, device=self.Q_eval.device), -np.inf)
+            action = T.argmax(actions).item()
+        else:
+            options = np.where(observation == 0)[0]
+            action = np.random.choice(options)  # choose a random empty cell
+        return action
+
+    def chooseAction_probabilistic(self, observation):
+        rand = np.random.random()
+        actions = self.Q_eval.forward(observation)
+        if rand > self.EPSILON:
+            action = (actions.cumsum(0) > np.random.random()).nonzero().take(
+                self.zero_long).item()  # choose probabilistically
+            taken = observation == 0  # todo: apply to probabilistic move choice
+            actions = actions.masked_fill(T.tensor(taken, device=self.Q_eval.device), -np.inf)
+            action = T.argmax(actions).item()
         else:
             options = np.where(observation == 0)[0]
             action = np.random.choice(options)  # choose a random empty cell
@@ -129,30 +140,30 @@ class Agent(object):
         T.save(self.Q_eval.state_dict(), path)
         print("Saved model to", path)
 
-
-alpha = 0.003
-num_pos = 3 ** 2
-q = 2
-model = DeepQNetwork(alpha, n_actions=num_pos,
-                     num_pos=num_pos, fc1_dims=2048, fc2_dims=2048, q=q)
-model.load_state_dict(T.load('models/5k_one_hot_player_1.pth'))
-model.eval()
-b = Board.blank_board(3, 2, 2)
-b.cli()
-fwded = model.forward(b.to_linear_array())
-actions = fwded / fwded.sum()
-print(actions)
-cumprobs = actions.cumsum(0)
-print(cumprobs)
-reps = int(1e3)
-start = time.time()
-z = T.tensor([0], device='cuda')
-l = []
-for _ in range(reps):
-    r = np.random.random()
-    a = (cumprobs > r).nonzero().take(z).item()
-    l.append(a)
-end = time.time()
-print(end- start)
-for i in range(9):
-    print("occurences of", i, ":", l.count(i), fwded[i])
+#
+# alpha = 0.003
+# num_pos = 3 ** 2
+# q = 2
+# model = DeepQNetwork(alpha, n_actions=num_pos,
+#                      num_pos=num_pos, fc1_dims=2048, fc2_dims=2048, q=q)
+# model.load_state_dict(T.load('models/5k_one_hot_player_1.pth'))
+# model.eval()
+# b = Board.blank_board(3, 2, 2)
+# b.cli()
+# fwded = model.forward(b.to_linear_array())
+# actions = fwded / fwded.sum()
+# print(actions)
+# cumprobs = actions.cumsum(0)
+# print(cumprobs)
+# reps = int(1e3)
+# start = time.time()
+# z = T.tensor([0], device='cuda')
+# l = []
+# for _ in range(reps):
+#     r = np.random.random()
+#     a = (cumprobs > r).nonzero().take(z).item()
+#     l.append(a)
+# end = time.time()
+# print(end- start)
+# for i in range(9):
+#     print("occurences of", i, ":", l.count(i), fwded[i])

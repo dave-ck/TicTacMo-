@@ -60,10 +60,10 @@ def play(num_games, n, k, q):
     #            'Alpha' + str(brain.ALPHA) + 'Memory' + \
     #            str(brain.Q_eval.fc1_dims) + '-' + str(brain.Q_eval.fc2_dims) + '.png'
     # todo: update when player turn implemented
-    plotLearning(x, scores[1], eps_history, "./tmp/{ng}brain0_n{n}_k{k}.png".format(ng=num_games, n=n, k=k))
-    plotLearning(x, scores[2], eps_history, "./tmp/{ng}brain1_n{n}_k{k}.png".format(ng=num_games, n=n, k=k))
     for i in range(1, q + 1):
         brains[i].save_model("models/%dgames_%dn_%dk_%dq_player%d.pth" % (num_games, n, k, q, i))
+        plotLearning(x, scores[i], eps_history,
+                     "./tmp/{ng}brain{player}_n{n}_k{k}.png".format(player=i, ng=num_games, n=n, k=k))
 
 
 def play_trainee(num_games, n, k, q, trainee_number):
@@ -75,9 +75,8 @@ def play_trainee(num_games, n, k, q, trainee_number):
     for i in range(num_games):
         if i % 40 == 0 and i > 0:
             out = 'episode: %d' % i
-            for player in range(1, q + 1):
-                avg_score = np.mean(scores[player][max(0, i - 40):(i + 1)])
-                out += '; average score[%d]: %.3f' % (player, avg_score)
+            avg_score = np.mean(scores[max(0, i - 40):(i + 1)])
+            out += '; average score[%d]: %.3f' % (trainee_number, avg_score)
             out += '; epsilon: %.3f' % brain.EPSILON
             print(out)
         # else:
@@ -88,13 +87,14 @@ def play_trainee(num_games, n, k, q, trainee_number):
         last_seen = board.to_linear_array()
         last_move = -1
         winner = board.win()
-        opponents = {i: np.random.choice(['greedy', 'random', 'rl']) for i in range(1, q+1)} # find opponents
+        opponents = {i: np.random.choice(['greedy', 'random'] + ['rl'] * 6) for i in range(1, q + 1)}
+        # find opponents; 3/4 chance to be vs RL algorithm
         while not winner:  # during play
             player = (board.turn % board.q) + 1
             if player == trainee_number:
                 current_obs = board.to_linear_array()
-                if last_move[player] != -1:  # if player has moved in the past
-                    brain.storeTransition(last_seen[player], last_move[player],
+                if last_move != -1:  # if player has moved in the past
+                    brain.storeTransition(last_seen, last_move,
                                           board.reward(player, offense_scaling=0.1, defense_scaling=1),
                                           current_obs, False)
                     brain.learn()
@@ -121,19 +121,29 @@ def play_trainee(num_games, n, k, q, trainee_number):
             print("Winner: %d" % winner)
         current_obs = board.to_linear_array()
         if last_move != -1:  # if player has moved
-            brain.storeTransition(last_seen[player], last_move[player], board.reward(player), current_obs,
+            brain.storeTransition(last_seen, last_move, board.reward(player), current_obs,
                                   True)
             brain.learn()
-            scores[player].append(board.reward(player))
+            scores.append(board.reward(player))
     x = [i + 1 for i in range(num_games)]
     plotLearning(x, scores, eps_history, "./tmp/{ng}games_player{p}_of{q}_n{n}_k{k}.png".format(q=q, p=trainee_number,
                                                                                                 ng=num_games, n=n, k=k))
     brain.save_model("models/%dgames_%dn_%dk_%dq_player%d.pth" % (num_games, n, k, q, trainee_number))
 
+for iter in range(50):
+    for game in [(3, 2, 2),  # classic
+                 (3, 2, 3),  # 3-player 3^2
+                 (4, 3, 2),  # Qubic
+                 (4, 3, 3)]:  # 3-player Qubic
+        for player in [1, 2, 3]:
+            if game[2] <= player:
+                play_trainee(1025+iter, *game, player)
 
-play(1000, 4, 2, 3)
-play(1000, 4, 3, 3)
-play(1000, 4, 2, 2)
-play(1000, 4, 3, 2)
-play(1000, 3, 3, 2)
-play(1000, 3, 2, 2)
+for iter in range(50):
+    for game in [(3, 2, 2),  # classic
+                 (3, 2, 3),  # 3-player 3^2
+                 (4, 3, 2),  # Qubic
+                 (4, 3, 3)]:  # 3-player Qubic
+        for player in [1, 2, 3]:
+            if game[2] <= player:
+                play_trainee(10024+iter, *game, player)

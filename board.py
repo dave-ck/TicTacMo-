@@ -138,18 +138,19 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
                 model.load_state_dict(torch.load("./models/"+model_name))
                 model.eval()
                 self.RL_models[player_symbol] = model
+                print("loaded model", model_name, "with", model_training, "games' experience.")
             else:
                 raise LookupError("Cannot find a RL model for the specified n, k, q, playerNo! Train one and save it,"
                                   " then try again.")
         fwded = self.RL_models[player_symbol].forward(self.to_linear_array())
         actions = fwded
-        print("fwded:", fwded)
+        # print("fwded:", fwded)
         taken = (self.to_linear_array() != 0)  # todo: apply to probabilistic move choice
-        print("taken:", taken)
+        # print("taken:", taken)
         actions = actions.masked_fill(torch.tensor(taken, device='cuda'), -np.inf)
-        print("actions:", actions)
+        # print("actions:", actions)
         action = torch.argmax(actions).item()
-        print(action)
+        # print(action)
         self.move(action)
 
     def reward(self, symbol, offense_scaling=1, defense_scaling=1):
@@ -471,10 +472,10 @@ def win_(n, k, q, positions, lines, num_pos, num_lines):
         return -1
     return 0
 
-for _ in range(1):
-    b = Board.blank_board(3, 2, 2)
-    while not b.win():
-        print(b)
-        b.rl_move()
-        b.cli()
-        print()
+# for _ in range(1):
+#     b = Board.blank_board(3, 2, 2)
+#     while not b.win():
+#         print(b)
+#         b.rl_move()
+#         b.cli()
+#         print()

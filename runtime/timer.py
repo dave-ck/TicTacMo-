@@ -18,7 +18,7 @@ py_times = []
 py_acc_times = []
 c_times = []
 precast_c_times = []
-pos_nums = [9, 16, 27, 64, 128]
+pos_nums = [9, 27, 64, 128]
 for num_pos in pos_nums:
     reps = 2**16
     transform = np.arange(num_pos, dtype="int8") + 1
@@ -167,13 +167,13 @@ for num_pos in pos_nums:
     precast_c_times.append(time_c_precast)
 
 ind = np.arange(len(pos_nums))  # the x locations for the groups
-width = 0.12  # the width of the bars
+width = 0.1  # the width of the bars
 
 fig, ax = plt.subplots()
 rects1 = ax.bar(ind - width * 3.5, torch_gpu_times, width,
-                label='GPU')
+                label='Torch (GPU)')
 rects2 = ax.bar(ind - width * 2.5, torch_cpu_times, width,
-                label='CPU')
+                label='Torch (CPU)')
 rects3 = ax.bar(ind - width * 1.5, np_times, width,
                 label='NP')
 rects4 = ax.bar(ind - width * .5, np_acc_times, width,
@@ -215,7 +215,7 @@ def autolabel(rects, xpos='center'):
                     xy=(rect.get_x() + rect.get_width() / 3, height),
                     xytext=(offset[xpos] * 3, 0),  # use 3 points offset
                     textcoords="offset points",  # in both directions
-                    ha=ha[xpos], va='bottom', fontsize=5)
+                    ha=ha[xpos], va='bottom', fontsize=6)
 
 
 autolabel(rects1, "center")

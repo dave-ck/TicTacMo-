@@ -120,12 +120,13 @@ for batch_size in batch_sizes:
     _, time_torch_cpu = map_torch_cpu(base_batch, transform)
     _, time_np = map_np(base_batch, transform)
     _, time_np_acc = map_np_acc(base_batch, transform)
-    _, time_py = map_py(base_batch, transform)
+    # _, time_py = map_py(base_batch, transform)
     _, time_py_acc = map_py_acc(base_batch, transform)
-    time_torch, time_torch_cpu, time_np, time_np_acc, time_py, time_py_acc = time_torch*1e3, time_torch_cpu*1e3, time_np*1e3, time_np_acc*1e3, time_py*1e3, time_py_acc*1e3
+    # time_torch, time_torch_cpu, time_np, time_np_acc, time_py, time_py_acc = time_torch*1e3, time_torch_cpu*1e3, time_np*1e3, time_np_acc*1e3, time_py*1e3, time_py_acc*1e3
+    time_torch, time_torch_cpu, time_np, time_np_acc, time_py_acc = time_torch*1e3, time_torch_cpu*1e3, time_np*1e3, time_np_acc*1e3,  time_py_acc*1e3
     print("Torch:", time_torch)
     print("Torch (CPU):", time_torch_cpu)
-    print("Plain Python:", time_py)
+    # print("Plain Python:", time_py)
     print("Numba Python:", time_py_acc)
     print("NP:", time_np)
     print("Numba NP:", time_np_acc)
@@ -133,7 +134,7 @@ for batch_size in batch_sizes:
     torch_cpu_times.append(time_torch_cpu)
     np_times.append(time_np)
     np_acc_times.append(time_np_acc)
-    py_times.append(time_py)
+    # py_times.append(time_py)
     py_acc_times.append(time_py_acc)
 
 ind = np.arange(len(batch_sizes))  # the x locations for the groups
@@ -148,9 +149,9 @@ rects3 = ax.bar(ind - width * .5, np_times, width,
                 label='Numpy')
 rects4 = ax.bar(ind + width * .5, np_acc_times, width,
                 label='Numba + Numpy')
-rects5 = ax.bar(ind + width * 1.5, py_times, width,
-                label='Plain Python')
-rects6 = ax.bar(ind + width * 2.5, py_acc_times, width,
+# rects5 = ax.bar(ind + width * 1.5, py_times, width,
+#                 label='Plain Python')
+rects6 = ax.bar(ind + width * 1.5, py_acc_times, width,
                 label='Numba Python')
 
 # Add some text for labels, title and custom x-axis tick labels, etc.
@@ -187,7 +188,7 @@ autolabel(rects1, "center")
 autolabel(rects2, "center")
 autolabel(rects3, "center")
 autolabel(rects4, "center")
-autolabel(rects5, "center")
+# autolabel(rects5, "center")
 autolabel(rects6, "center")
 
 fig.tight_layout()

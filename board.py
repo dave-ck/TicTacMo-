@@ -12,7 +12,7 @@ from copy import deepcopy
 
 class Board:  # Cimpl entire class as a struct, functions as methods taking the struct as a parameter
 
-    def __init__(self, n, k, q, num_pos, positions, lines, mappings, turn):
+    def __init__(self, n, k, q, num_pos, positions, lines, mappings, turn, RL_models=None):
         self.name = "Game"
         self.n = n  # number of
         self.k = k  # number of dimensions
@@ -23,7 +23,7 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
         self.num_lines = len(self.lines)
         self.mappings = mappings
         self.positions = positions  # 0 for empty, 1 for X (first and odd moves), -1 for O (second and even moves)
-        self.RL_models = {i: None for i in range(1, q + 1)}
+        self.RL_models = RL_models or {i: None for i in range(1, q + 1)}
 
     @classmethod
     def blank_board(cls, n, k, q):
@@ -63,6 +63,8 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
     def move(self, position):  # return a copy of the config, with the move added
         if self.positions[position] == 0:  # illegal move are ignored, turn incremented and player loses their move
             self.positions[position] = self.turn % self.q + 1
+        else:
+            raise ValueError("Invalid move issued")
         self.turn += 1
 
     def move_clone(self, position):
@@ -71,7 +73,8 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
         :param position: The position, as an integer, where the move should be made (i.e. 0 for top left corner, in 2D)
         :return: the cloned Board with the move applied.
         """
-        clone_board = deepcopy(self)
+        clone_board = Board(self.n, self.k, self.q, self.num_pos, self.positions.copy(), self.lines, self.mappings,
+                            self.turn, self.RL_models)
         clone_board.move(position)
         return clone_board
 
@@ -135,7 +138,7 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
                         model_name = mname
                         model_training = mtraining
             if model_name:
-                model.load_state_dict(torch.load("./models/"+model_name))
+                model.load_state_dict(torch.load("./models/" + model_name))
                 model.eval()
                 self.RL_models[player_symbol] = model
                 print("loaded model", model_name, "with", model_training, "games' experience.")
@@ -152,6 +155,7 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
         action = torch.argmax(actions).item()
         # print(action)
         self.move(action)
+        return self
 
     def reward(self, symbol, offense_scaling=1, defense_scaling=1):
         return reward_(self.n, self.k, self.q, self.positions, self.lines, self.num_pos, symbol, self.num_lines,
@@ -246,8 +250,8 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
         :param player_no:
         """
         startTime = time.time()
-        if guide not in ['human', 'random', 'greedy']:
-            raise ValueError("Tree guide must be one of: 'human'; 'random'; 'greedy'.")
+        if guide not in ['human', 'random', 'greedy', 'rl']:
+            raise ValueError("Tree guide must be one of: 'human'; 'random'; 'greedy'; 'rl'.")
         win_count = {i: 0 for i in range(self.q + 1)}  # win_count[0] counts draws
         leaf_count = 0
         states = {deepcopy(self)}
@@ -277,6 +281,8 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
                             children.update({parent.greedy_move()})
                         elif guide == 'random':
                             children.update({parent.rand_move()})
+                        elif guide == 'rl':
+                            children.update({parent.rl_move()})
                     else:
                         children.update(parent.successors())
             states = children.copy()
@@ -472,10 +478,8 @@ def win_(n, k, q, positions, lines, num_pos, num_lines):
         return -1
     return 0
 
-# for _ in range(1):
-#     b = Board.blank_board(3, 2, 2)
-#     while not b.win():
-#         print(b)
-#         b.rl_move()
-#         b.cli()
-#         print()
+
+#
+# b = Board.blank_board(3, 2, 2)
+# b.guided_tree('rl', 1)
+

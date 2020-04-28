@@ -1,0 +1,4 @@
+\item [``Expert" moves:] those moves which do not guarantee perfect play, and are made by following a heuristic, applying machine learning, or are manually input by the researcher; referred to as ``strategic" moves in Patashnik's paper \cite{patashnik1980qubic}.
+	
+	
+\item [``Brutish" moves:] moves which a computer player may find deterministically to guarantee perfect play (i.e. with a brute-force search of the branch of the game-tree resulting from the move). These moves are often \textbf{forced sequences}, which have a narrow (linear-size) game tree branch; referred to as ``tactical" moves in Patashnik's paper \cite{patashnik1980qubic}.

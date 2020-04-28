@@ -1,0 +1,5 @@
+def gather(base, transform):
+	out = []
+	for i in range(len(t)):
+		out.append(b[t[i]])
+	return out

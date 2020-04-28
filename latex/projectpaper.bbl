@@ -1,0 +1,39 @@
+\begin{thebibliography}{xx}
+
+\harvarditem{Do}{2005}{trick3norman}
+Do, N.  \harvardyearleft 2005\harvardyearright , `Mathellaneous: How to win at
+  tictactoe', {\em Gazette of the Australian Mathematical Society}
+  pp.~151--161.
+
+\harvarditem{Golomb \harvardand\ Hales}{2002}{golomb2002hypercube}
+Golomb, S.~W. \harvardand\ Hales, A.~W.  \harvardyearleft 2002\harvardyearright
+  , `Hypercube tic-tac-toe', {\em More Games of No Chance} {\bf 42},~167--180.
+
+\harvarditem[Hefetz et~al.]{Hefetz, Krivelevich, Stojakovi{\'c} \harvardand\
+  Szab{\'o}}{2014}{hefetz2014positional}
+Hefetz, D., Krivelevich, M., Stojakovi{\'c}, M. \harvardand\ Szab{\'o}, T.
+  \harvardyearleft 2014\harvardyearright , {\em Positional games}, Springer.
+
+\harvarditem{Mozur}{1955}{franklin_1955}
+Mozur, P.  \harvardyearleft 1955\harvardyearright , `Three-dimensional
+  tic-tac-toe game', {\em Journal of the Franlin Institute} {\bf 259(1)},~85.
+\newline\harvardurl{https://www.nytimes.com/2017/05/23/business/google-deepmind-alphago-go-champion-defeat.html}
+
+\harvarditem{Mozur}{2017}{mozur_2017}
+Mozur, P.  \harvardyearleft 2017\harvardyearright , `Google’s alphago defeats
+  chinese go master in win for a.i.', {\em New York Times} .
+\newline\harvardurl{https://www.nytimes.com/2017/05/23/business/google-deepmind-alphago-go-champion-defeat.html}
+
+\harvarditem{Munroe}{2010}{munroe2010xkcd}
+Munroe, R.  \harvardyearleft 2010\harvardyearright , `Xkcd\# 832: Tic-tac-toe',
+  {\em URL: http://xkcd. com/832} {\bf 1}.
+
+\harvarditem{Parker}{1995}{parker1995she}
+Parker, M.  \harvardyearleft 1995\harvardyearright , {\em She does math!:
+  real-life problems from women on the job}, Vol.~4, MAA.
+
+\harvarditem{Patashnik}{1980}{patashnik1980qubic}
+Patashnik, O.  \harvardyearleft 1980\harvardyearright , `Qubic: 4$\times$
+  4$\times$ 4 tic-tac-toe', {\em Mathematics Magazine} {\bf 53}(4),~202--216.
+
+\end{thebibliography}

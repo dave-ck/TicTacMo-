@@ -7,7 +7,7 @@ import random
 import numpy as np
 import torch
 from dq import DeepQNetwork
-from copy import deepcopy
+from copy import deepcopy, copy
 
 
 class Board:  # Cimpl entire class as a struct, functions as methods taking the struct as a parameter
@@ -85,27 +85,14 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
     def equals(self, other):
         return (other.positions == self.positions).all()
 
-    def draw(self):
-        return 0 not in self.positions
-
     def to_linear_array(self):
         return self.positions
 
     def rand_move(self, recursed=0):
-        if recursed < 100:
-            index = random.randint(0, self.num_pos - 1)
-            if self.positions[index] == 0:
-                self.move(index)
-                return self
-            else:
-                self.rand_move(recursed + 1)
-                return self
-        else:
-            for index in range(self.num_pos):
-                if self.positions[index] == 0:
-                    self.move(index)
-                    return self
-            raise ValueError("No random move is possible on a full board.")
+        free = (self.positions == 0).nonzero()[0]
+        move = np.random.choice(free)
+        self.move(move)
+        return self
 
     def greedy_move(self, offense_scaling=1, defense_scaling=1):
         best_score = np.inf * -1
@@ -147,13 +134,9 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
                                   " then try again.")
         fwded = self.RL_models[player_symbol].forward(self.to_linear_array())
         actions = fwded
-        # print("fwded:", fwded)
         taken = (self.to_linear_array() != 0)  # todo: apply to probabilistic move choice
-        # print("taken:", taken)
         actions = actions.masked_fill(torch.tensor(taken, device='cuda'), -np.inf)
-        # print("actions:", actions)
         action = torch.argmax(actions).item()
-        # print(action)
         self.move(action)
         return self
 
@@ -161,11 +144,43 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
         return reward_(self.n, self.k, self.q, self.positions, self.lines, self.num_pos, symbol, self.num_lines,
                        offense_scaling, defense_scaling)
 
-    def __copy__(self):  # https://stackoverflow.com/a/15774013/12387665
-        cls = self.__class__
-        result = cls.__new__(cls)
-        result.__dict__.update(self.__dict__)
-        return result
+    def playout_plain(self, num_games):
+        outcomes = {i: 0 for i in range(self.q + 1)}
+        for _ in range(num_games):
+            b = copy(self)
+            while not b.win():
+                b.rand_move()
+            winner = b.win()
+            if winner == -1:
+                winner = 0
+            outcomes[winner] += 1
+        return outcomes
+
+    def playout(self, num_games):
+        res = playout_hyb(self.positions, num_games, self.lines, self.num_pos, self.turn, self.n, self.q)
+        return dict(zip(*np.unique(res, return_counts=True)))
+
+    def carlo_greedy(self, count, weights):
+        best_score = np.inf * -1
+        best_move = 0
+        for move in range(self.num_pos):
+            if self.positions[move] == 0:
+                board = self.move_clone(move)
+                outcomes = board.playout(count)
+                reward = -1 * sum(outcomes.values())
+                # set to 1 to incentivize only drawing
+                for outcome in outcomes:
+                    reward += outcomes[outcome] * weights[outcome]
+                if reward > best_score:
+                    best_move = move
+                    best_score = reward
+        self.move(best_move)
+        return self
+
+    def __copy__(self):
+        clone_board = Board(self.n, self.k, self.q, self.num_pos, self.positions.copy(), self.lines, self.mappings,
+                            self.turn, self.RL_models)
+        return clone_board
 
     def __deepcopy__(self, memo):  # https://stackoverflow.com/a/15774013/12387665
         cls = self.__class__
@@ -182,7 +197,7 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
         if self.k == 2:
 
             # construct a 2D array, then print nicely
-            sub = {0: "   ", 1: " X ", 2: " O ", 3: " = ", 4: " & ", 5: " + ", 6: " L "}
+            sub = {0: "   ", 1: " X ", 2: " O ", 3: " # ", 4: " + ", 5: " & ", 6: " L "}
             board = list(map(lambda x: sub[x], list(self.positions)))
             board = ''.join(board)
             board_split = [board[i * 3:(i + self.n) * 3] for i in range(0, self.num_pos, self.n)]
@@ -243,14 +258,14 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
         self.move(choice)
         return self
 
-    def guided_tree(self, guide, player_no):
+    def guided_tree(self, guide, player_no, weights, bound=1000):
         """
         Perform guided tree search on the board, starting at the current state.
         :param guide: what algorithm/heuristic chooses moves to guide the tree
         :param player_no:
         """
         startTime = time.time()
-        if guide not in ['human', 'random', 'greedy', 'rl']:
+        if guide not in ['human', 'random', 'greedy', 'rl', 'carlo']:
             raise ValueError("Tree guide must be one of: 'human'; 'random'; 'greedy'; 'rl'.")
         win_count = {i: 0 for i in range(self.q + 1)}  # win_count[0] counts draws
         leaf_count = 0
@@ -283,6 +298,68 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
                             children.update({parent.rand_move()})
                         elif guide == 'rl':
                             children.update({parent.rl_move()})
+                        elif guide == 'carlo':
+                            children.update({parent.carlo_greedy(bound, weights)})
+                    else:
+                        children.update(parent.successors())
+            states = children.copy()
+            children = set()
+            print("After %dth move: %d active nodes" % (depth, len(states)))
+            print("Leaf count: {}".format(leaf_count))
+            print("Draw count: {}".format(win_count[0]))
+            for player in range(1, self.q + 1):
+                print("Wins for player {}: {}".format(player, win_count[player]))
+                print("Losses for player {}: {}".format(player, leaf_count - win_count[0] - win_count[player]))
+            print("\n\n")
+        print("Exhausted all configurations in {} seconds.".format(time.time() - startTime))
+        print("Leaf count: {}".format(leaf_count))
+        print("Draw count: {}".format(win_count[0]))
+        for player in range(1, self.q + 1):
+            print("Wins for player {}: {}".format(player, win_count[player]))
+            print("Losses for player {}: {}".format(player, leaf_count - win_count[0] - win_count[player]))
+
+    def rev_guided_tree(self, guide, player_no, weights, bound=1024):
+        """
+        Perform guided tree search on the board, starting at the current state.
+        :param guide: what algorithm/heuristic chooses moves to guide the tree
+        :param player_no:
+        """
+        startTime = time.time()
+        if guide not in ['human', 'random', 'greedy', 'rl', 'carlo']:
+            raise ValueError("Tree guide must be one of: 'human'; 'random'; 'greedy'; 'rl'.")
+        win_count = {i: 0 for i in range(self.q + 1)}  # win_count[0] counts draws
+        leaf_count = 0
+        states = {deepcopy(self)}
+        children = set()
+        depth = 0
+        while states:
+            depth += 1
+            print("At depth: %d; active nodes: %d" % (depth, len(states)))
+            for parent in states:
+                winner = parent.win()
+                if winner:
+                    if winner == -1:
+                        print("Draw:")
+                        parent.cli()
+                    if winner == -1:  # if a draw
+                        win_count[0] += 1
+                        leaf_count += 1
+                    else:
+                        win_count[winner] += 1
+                        leaf_count += 1
+                else:
+                    # produce children; consult oracle for every move except target player
+                    if (parent.turn % parent.q) + 1 != player_no:
+                        if guide == 'human':
+                            children.update({parent.human_move()})
+                        elif guide == 'greedy':
+                            children.update({parent.greedy_move()})
+                        elif guide == 'random':
+                            children.update({parent.rand_move()})
+                        elif guide == 'rl':
+                            children.update({parent.rl_move()})
+                        elif guide == 'carlo':
+                            children.update({parent.carlo_greedy(bound, weights)})
                     else:
                         children.update(parent.successors())
             states = children.copy()
@@ -479,7 +556,39 @@ def win_(n, k, q, positions, lines, num_pos, num_lines):
     return 0
 
 
-#
-# b = Board.blank_board(3, 2, 2)
-# b.guided_tree('rl', 1)
+@jit(nopython=True)
+def playout_ind(positions, num_games, lines, num_pos, turn, n, q):
+    # make num_games copies of board in a 2D array
+    positions.astype(np.int16)
+    wins = np.zeros(num_games)  # 0 if active, Q if won by player Q
+    base_turn = turn
+    for boardNo in range(num_games):
+        board = positions.copy()
+        turn = base_turn
+        while not wins[boardNo] and turn < num_pos:
+            player = (turn % q) + 1
+            empties = (board == 0).nonzero()[0]
+            move = np.random.choice(empties)
+            board[move] = player
+            board_lines = board.take(lines)
+            player_wins = ((board_lines == player).sum(axis=1) == n).any()
+            if player_wins:
+                wins[boardNo] = player
+            turn += 1
+    return wins
 
+
+@jit(nopython=True)
+def playout_hyb(positions, num_games, lines, num_pos, turn, n, q):
+    num_batches = int(num_games / 100)
+    out = np.empty((num_batches, 100), dtype=np.int16)
+    for index in range(num_batches):
+        out[index] = playout_ind(positions, 100, lines, num_pos, turn, n, q)
+    return out
+
+
+b = Board.blank_board(3, 3, 4)
+weights = {0: -10, 1: -10, 2: 2, 3: 1, 4: 1}
+b.rev_guided_tree('carlo', 1, weights, bound=1024)
+
+# b.rev_guided_tree('carlo', 3, weights, 1024)

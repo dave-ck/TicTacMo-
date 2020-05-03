@@ -9,7 +9,7 @@ from board import Board
 def play(num_games, n, k, q):
     brains = {
         i: Agent(gamma=0.99, epsilon=1.0, batch_size=64, n_actions=n ** k, num_pos=n ** k, alpha=0.003, eps_end=0.005,
-                 eps_dec=0.9999, q=q) for i in range(1, q + 1)}
+                 eps_dec=0.9998, q=q) for i in range(1, q + 1)}
     scores = {i: [] for i in range(1, q + 1)}
     eps_history = []
     board = Board.blank_board(n, k, q)
@@ -68,7 +68,7 @@ def play(num_games, n, k, q):
 
 def play_trainee(num_games, n, k, q, trainee_number):
     brain = Agent(gamma=0.99, epsilon=1.0, batch_size=64, n_actions=n ** k, num_pos=n ** k, alpha=0.003, eps_end=0.005,
-                  eps_dec=0.9999, q=q)
+                  eps_dec=0.9998, q=q)
     scores = []
     eps_history = []
     board = Board.blank_board(n, k, q)
@@ -87,15 +87,15 @@ def play_trainee(num_games, n, k, q, trainee_number):
         last_seen = board.to_linear_array()
         last_move = -1
         winner = board.win()
-        opponents = {i: np.random.choice(['greedy', 'random'] + ['rl'] * 6) for i in range(1, q + 1)}
-        # find opponents; 3/4 chance to be vs RL algorithm
+        opponents = {i: np.random.choice(['random', 'greedy', 'random', 'rl']) for i in range(1, q + 1)}
+        # find opponents; 3/5 chance random, 1/5 greedy, 1/5 previous RL
         while not winner:  # during play
             player = (board.turn % board.q) + 1
             if player == trainee_number:
                 current_obs = board.to_linear_array()
                 if last_move != -1:  # if player has moved in the past
                     brain.storeTransition(last_seen, last_move,
-                                          board.reward(player, offense_scaling=0.1, defense_scaling=1),
+                                          board.reward(player, offense_scaling=1, defense_scaling=1),
                                           current_obs, False)
                     brain.learn()
                 action = brain.chooseAction(current_obs)
@@ -106,17 +106,14 @@ def play_trainee(num_games, n, k, q, trainee_number):
                     print("After move %d:" % board.turn)
                     board.cli()
                     print("\n\n")
-                winner = board.win()
             else:
                 if opponents[player] == 'greedy':
                     board.greedy_move()
-                    winner = board.win()
                 elif opponents[player] == 'random':
                     board.rand_move()
-                    winner = board.win()
                 else:
                     board.rl_move()
-                    winner = board.win()
+            winner = board.win()
         if i > 0 and i % 240 == 0:
             print("Winner: %d" % winner)
         current_obs = board.to_linear_array()
@@ -130,20 +127,15 @@ def play_trainee(num_games, n, k, q, trainee_number):
                                                                                                 ng=num_games, n=n, k=k))
     brain.save_model("models/%dgames_%dn_%dk_%dq_player%d.pth" % (num_games, n, k, q, trainee_number))
 
-for iter in range(50):
-    for game in [(3, 2, 2),  # classic
-                 (3, 2, 3),  # 3-player 3^2
-                 (4, 3, 2),  # Qubic
-                 (4, 3, 3)]:  # 3-player Qubic
-        for player in [1, 2, 3]:
-            if game[2] <= player:
-                play_trainee(1025+iter, *game, player)
 
-for iter in range(50):
-    for game in [(3, 2, 2),  # classic
-                 (3, 2, 3),  # 3-player 3^2
-                 (4, 3, 2),  # Qubic
-                 (4, 3, 3)]:  # 3-player Qubic
-        for player in [1, 2, 3]:
-            if game[2] <= player:
-                play_trainee(10024+iter, *game, player)
+for num_games in [2**16]:
+    for game in [
+        (3, 2, 2)
+    ]:
+        for player in [1, 2, 3, 4, 5]:
+            if game[2] >= player:
+                # try:
+                play_trainee(num_games, *game, player)
+                # except Exception  as e:
+                #     print("fuck it", e)
+                #     print("n=", game[0], "k=", game[1], "q=", game[2])

@@ -3,7 +3,7 @@ import time
 from numba import jit
 import numba
 import numpy as np
-from board import Board, generate_lines
+from board import Board
 
 
 @jit(nopython=True)
@@ -57,51 +57,54 @@ def playout_hyb(positions, num_games, lines, num_pos, turn, n, q):
         out[index] = playout_ind(positions, 128, lines, num_pos, turn, n, q)
     return out
 
-b = Board.blank_board(4, 3, 4)
-mgps = 0
-for n_g in [4096, 8192, 16384, 32768, 65536]:
-    print("%d games:" % n_g)
-    s = time.time()
-    res = playout(b.positions, n_g, b.lines, b.num_pos, b.turn, b.n, b.q)
-    e = time.time()
-    secs = e-s
-    print("C: Done in %5f seconds" % secs)
-    gps = n_g / secs
-    mgps = max(mgps, gps)
-    print("C: Games per second: %5f" % (n_g/secs))
-    print("C:", dict(zip(*np.unique(res, return_counts=True))))
-    try:
-        s = time.time()
-        res = playout(b.positions, n_g, b.lines, b.num_pos, b.turn, b.n, b.q)
-        e = time.time()
-        secs = e-s
-        print("C_i: Done in %5f seconds" % secs)
-        gps = n_g / secs
-        mgps = max(mgps, gps)
-        print("C_i: Games per second: %5f" % (n_g/secs))
-        print("C_i:", dict(zip(*np.unique(res, return_counts=True))))
-    except ZeroDivisionError as e:
-        print("C_i too damn good, zerodiverror", e)
-    s = time.time()
-    res = b.playout_plain(n_g)
-    e = time.time()
-    secs = e - s
-    print("B: Done in %5f seconds" % secs)
-    gps = n_g / secs
-    mgps = max(mgps, gps)
-    print("B: Games per second: %5f" % gps)
-    print("B:", res)
-    try:
-        s = time.time()
-        res = playout_hyb(b.positions, n_g, b.lines, b.num_pos, b.turn, b.n, b.q)
-        e = time.time()
-        secs = e - s
-        print("C_h: Done in %5f seconds" % secs)
-        gps = n_g / secs
-        mgps = max(mgps, gps)
-        print("C_h: Games per second: %5f" % gps)
-        print("C_h:", dict(zip(*np.unique(res, return_counts=True))))
-    except ZeroDivisionError as e:
-        print("C_h too damn good, zerodiverror", e)
 
-print("mgps:", mgps)
+
+
+# b = Board.blank_board(4, 3, 4)
+# mgps = 0
+# for n_g in [4096, 8192, 16384, 32768, 65536]:
+#     print("%d games:" % n_g)
+#     s = time.time()
+#     res = playout(b.positions, n_g, b.lines, b.num_pos, b.turn, b.n, b.q)
+#     e = time.time()
+#     secs = e-s
+#     print("C: Done in %5f seconds" % secs)
+#     gps = n_g / secs
+#     mgps = max(mgps, gps)
+#     print("C: Games per second: %5f" % (n_g/secs))
+#     print("C:", dict(zip(*np.unique(res, return_counts=True))))
+#     try:
+#         s = time.time()
+#         res = playout(b.positions, n_g, b.lines, b.num_pos, b.turn, b.n, b.q)
+#         e = time.time()
+#         secs = e-s
+#         print("C_i: Done in %5f seconds" % secs)
+#         gps = n_g / secs
+#         mgps = max(mgps, gps)
+#         print("C_i: Games per second: %5f" % (n_g/secs))
+#         print("C_i:", dict(zip(*np.unique(res, return_counts=True))))
+#     except ZeroDivisionError as e:
+#         print("C_i too damn good, zerodiverror", e)
+#     s = time.time()
+#     res = b.playout_plain(n_g)
+#     e = time.time()
+#     secs = e - s
+#     print("B: Done in %5f seconds" % secs)
+#     gps = n_g / secs
+#     mgps = max(mgps, gps)
+#     print("B: Games per second: %5f" % gps)
+#     print("B:", res)
+#     try:
+#         s = time.time()
+#         res = playout_hyb(b.positions, n_g, b.lines, b.num_pos, b.turn, b.n, b.q)
+#         e = time.time()
+#         secs = e - s
+#         print("C_h: Done in %5f seconds" % secs)
+#         gps = n_g / secs
+#         mgps = max(mgps, gps)
+#         print("C_h: Games per second: %5f" % gps)
+#         print("C_h:", dict(zip(*np.unique(res, return_counts=True))))
+#     except ZeroDivisionError as e:
+#         print("C_h too damn good, zerodiverror", e)
+#
+# print("mgps:", mgps)

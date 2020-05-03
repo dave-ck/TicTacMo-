@@ -94,14 +94,13 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
         self.move(move)
         return self
 
-    def greedy_move(self, offense_scaling=1, defense_scaling=1):
+    def greedy_move(self, weights_arr):
         best_score = np.inf * -1
         best_move = 0
-        player_symbol = (self.turn % self.q) + 1
         for move in range(self.num_pos):
             if self.positions[move] == 0:
                 board = self.move_clone(move)
-                reward = board.reward(player_symbol, offense_scaling, defense_scaling)
+                reward = board.reward(weights_arr)
                 if reward > best_score:
                     best_move = move
                     best_score = reward
@@ -140,9 +139,9 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
         self.move(action)
         return self
 
-    def reward(self, symbol, offense_scaling=1, defense_scaling=1):
-        return reward_(self.n, self.k, self.q, self.positions, self.lines, self.num_pos, symbol, self.num_lines,
-                       offense_scaling, defense_scaling)
+    def reward(self, weights_arr):
+        return reward_(self.n, self.k, self.q, self.positions, self.lines, self.num_pos, self.num_lines,
+                       weights_arr)
 
     def playout_plain(self, num_games):
         outcomes = {i: 0 for i in range(self.q + 1)}
@@ -518,28 +517,20 @@ def reduce_(positions, mappings, num_pos):
 
 
 @jit(nopython=True)
-def reward_(n, k, q, positions, lines, num_pos, symbol, num_lines, offense_scaling, defense_scaling):
-    blockers = [i for i in range(q + 1) if i != 0 and i != symbol]
+def reward_(n, k, q, positions, lines, num_pos, num_lines, weights_arr):
     symbolSums = [(positions.take(lines) == i).sum(axis=1, dtype=np.int16) for i in range(q + 1)]
-    if np.any(symbolSums[symbol] == n):  # if the symbol queried has won
-        return num_lines * num_pos  # in excess of the maximum possible cumulative reward from *not* winning
-    for blocker in blockers:
-        if np.any(symbolSums[blocker] == n):  # if an opponent is in a winning configuration
-            return -1 * num_lines * num_pos
-    excl = np.zeros(num_lines) == 1  # need to trick into having type bool - numba won't compile with dtype=np.bool flag
-    for blocker in blockers:
-        excl = np.logical_or(symbolSums[blocker] != 0, excl)
-    incl = np.logical_and(np.logical_not(excl), symbolSums[symbol])
-    plus = (1 / (n - symbolSums[symbol][incl])).sum()
-    minus = 0
-    for opponent in blockers:
-        opponent_blockers = [i for i in range(q + 1) if i != 0 and i != opponent]
-        opponent_excl = np.zeros(num_lines) == 1
-        for blocker in opponent_blockers:
-            opponent_excl = np.logical_or(symbolSums[blocker] != 0, opponent_excl)
-        opponent_incl = np.logical_and(np.logical_not(opponent_excl), symbolSums[opponent])
-        minus += (1 / (n - symbolSums[opponent][opponent_incl])).sum()
-    return plus * offense_scaling - minus * defense_scaling
+    for player in range(1, q + 1):
+        if np.any(symbolSums[player] == n):  # if an opponent is in a winning configuration
+            return weights_arr[player] * num_lines * num_pos
+    total = 0
+    for player in range(1, q + 1):
+        player_blockers = [i for i in range(q + 1) if i != 0 and i != player]
+        player_excl = np.zeros(num_lines) == 1  # zeros array of dtype boolean, i.e. np.false(num_lines)
+        for blocker in player_blockers:
+            player_excl = np.logical_or(symbolSums[blocker] != 0, player_excl)
+        player_incl = np.logical_and(np.logical_not(player_excl), symbolSums[player])
+        total += (weights_arr[player] / (n - symbolSums[player][player_incl])).sum()
+    return total
     """ comment in report - enforcing the game is zero-sum yields quite poor play"""
 
 
@@ -580,15 +571,80 @@ def playout_ind(positions, num_games, lines, num_pos, turn, n, q):
 
 @jit(nopython=True)
 def playout_hyb(positions, num_games, lines, num_pos, turn, n, q):
-    num_batches = int(num_games / 100)
-    out = np.empty((num_batches, 100), dtype=np.int16)
+    num_batches = int(num_games / 128)
+    out = np.empty((num_batches, 128), dtype=np.int16)
     for index in range(num_batches):
-        out[index] = playout_ind(positions, 100, lines, num_pos, turn, n, q)
+        out[index] = playout_ind(positions, 128, lines, num_pos, turn, n, q)
     return out
 
 
-b = Board.blank_board(3, 3, 4)
-weights = {0: -10, 1: -10, 2: 2, 3: 1, 4: 1}
-b.rev_guided_tree('carlo', 1, weights, bound=1024)
+def rev_tree_carlo(n, k, q, lines, mappings, start_board, coalition_target, weights, mc_num_games):
+    startTime = time.time()
+    turn = (start_board != 0).sum()  # turn is the number of moves made so far
+    num_pos = n ** k
+    num_lines = len(lines)
+    win_count = {i: 0 for i in range(q + 1)}  # win_count[0] counts draws
+    leaf_count = 0
+    states = {tuple(start_board.copy())}  # use tuples - immutable, implement hashing for set functionality
+    children = set()
+    depth = 0
+    while states:
+        depth += 1
+        print("At depth: %d; active nodes: %d" % (depth, len(states)))
+        for parent in states:
+            np_parent = np.array(parent, dtype=np.int16)
+            winner = win_(n, k, q, np_parent, lines, num_pos, num_lines)
+            if winner:
+                leaf_count += 1
+                if winner == -1:  # if a draw
+                    win_count[0] += 1
+                    print("Draw:", np_parent)
+                else:
+                    if winner == coalition_target:
+                        print("Target win:", np_parent)
+                    win_count[winner] += 1
+            else:
+                # produce children; consult oracle for every move except target player
+                player = (turn % q) + 1  # todo: turn tracking
+                if player != coalition_target:
+                    best_score = np.inf * -1
+                    best_move = 0
+                    possible_moves = (np_parent == 0).nonzero()[0]
+                    for move in possible_moves:
+                        np_parent[move] = player  # do in-place work on np_parent to improve runtime
+                        playout = playout_hyb(np_parent, mc_num_games, lines, num_pos, turn + 1, n, q)
+                        outcomes = dict(zip(*np.unique(playout, return_counts=True)))
+                        reward = 0
+                        for outcome in outcomes:
+                            reward += outcomes[outcome] * weights[outcome]
+                        if reward > best_score:
+                            best_move = move
+                            best_score = reward
+                        np_parent[move] = 0  # revert parent
+                    np_parent[best_move] = player
+                    children.add(tuple(reduce_(np_parent, mappings, num_pos)))
+                else:
+                    possible_moves = (np_parent == 0).nonzero()[0]
+                    for move in possible_moves:
+                        np_parent[move] = player  # do in-place work on np_parent to improve runtime
+                        children.add(tuple(reduce_(np_parent, mappings, num_pos)))
+                        np_parent[move] = 0  # revert to parent state
 
-# b.rev_guided_tree('carlo', 3, weights, 1024)
+        states = children
+        children = set()
+        turn += 1
+        print("After %dth move: %d active nodes; computing for %3f seconds" % (
+            depth, len(states), time.time() - startTime))
+        print("Leaf count: {}".format(leaf_count))
+        print("Draw count: {}".format(win_count[0]))
+        for player in range(1, q + 1):
+            print("Wins for player {}: {}".format(player, win_count[player]))
+            print("Losses for player {}: {}".format(player, leaf_count - win_count[0] - win_count[player]))
+        print("\n\n")
+    print("Exhausted all configurations in {} seconds.".format(time.time() - startTime))
+    print("Leaf count: {}".format(leaf_count))
+    print("Draw count: {}".format(win_count[0]))
+    for player in range(1, q + 1):
+        print("Wins for player {}: {}".format(player, win_count[player]))
+        print("Losses for player {}: {}".format(player, leaf_count - win_count[0] - win_count[player]))
+

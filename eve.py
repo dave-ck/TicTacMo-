@@ -88,14 +88,21 @@ def play_trainee(num_games, n, k, q, trainee_number):
         last_move = -1
         winner = board.win()
         opponents = {i: np.random.choice(['random', 'greedy', 'random', 'rl']) for i in range(1, q + 1)}
-        # find opponents; 3/5 chance random, 1/5 greedy, 1/5 previous RL
+        greedy_weights = [1 for i in range(q + 1)] # opponents happy to draw or win
+        greedy_weights[trainee_number] = 0  # opponents neutral on draws
+        greedy_weights[trainee_number] = -1  # opponents want to make trainee lose
+        greedy_weights = np.array(greedy_weights)
+        trainee_weights = [-1 for i in range(q + 1)]  # trainee's opponents must lose
+        trainee_weights[trainee_number] = 0  # trainee neutral on draws
+        trainee_weights[trainee_number] = 1  # trainee wants to win
+        trainee_weights = np.array(trainee_weights)
         while not winner:  # during play
             player = (board.turn % board.q) + 1
             if player == trainee_number:
                 current_obs = board.to_linear_array()
                 if last_move != -1:  # if player has moved in the past
                     brain.storeTransition(last_seen, last_move,
-                                          board.reward(player, offense_scaling=1, defense_scaling=1),
+                                          board.reward(trainee_weights),
                                           current_obs, False)
                     brain.learn()
                 action = brain.chooseAction(current_obs)
@@ -108,7 +115,7 @@ def play_trainee(num_games, n, k, q, trainee_number):
                     print("\n\n")
             else:
                 if opponents[player] == 'greedy':
-                    board.greedy_move()
+                    board.greedy_move(greedy_weights)
                 elif opponents[player] == 'random':
                     board.rand_move()
                 else:
@@ -118,17 +125,17 @@ def play_trainee(num_games, n, k, q, trainee_number):
             print("Winner: %d" % winner)
         current_obs = board.to_linear_array()
         if last_move != -1:  # if player has moved
-            brain.storeTransition(last_seen, last_move, board.reward(player), current_obs,
+            brain.storeTransition(last_seen, last_move, board.reward(trainee_weights), current_obs,
                                   True)
             brain.learn()
-            scores.append(board.reward(player))
+            scores.append(board.reward(trainee_weights))
     x = [i + 1 for i in range(num_games)]
     plotLearning(x, scores, eps_history, "./tmp/{ng}games_player{p}_of{q}_n{n}_k{k}.png".format(q=q, p=trainee_number,
                                                                                                 ng=num_games, n=n, k=k))
     brain.save_model("models/%dgames_%dn_%dk_%dq_player%d.pth" % (num_games, n, k, q, trainee_number))
 
 
-for num_games in [2**16]:
+for num_games in [2 ** 16]:
     for game in [
         (3, 2, 2)
     ]:

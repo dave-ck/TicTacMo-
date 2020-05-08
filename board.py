@@ -212,7 +212,7 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
                 [(''.join([' %1d ' % i for i in range(self.n)])) for _ in range(self.n)])
             level_line = (" " * 2 * self.n) + (" " * (5 * self.n - 5)).join(
                 ["Level %1d" % lvl for lvl in range(self.n)])
-            d = {0: " ", 1: "X", 2: "O", 3: "=", 4: "Z"}
+            d = {0: " ", 1: "X", 2: "O", 3: "#", 4: "+", 5: "&", 6: "L"}
             board = np.array(list(map(lambda x: d[x], self.positions))).reshape([self.n] * 3)
             # reshape to 3D, then print nicely
             boardLines = ["" for _ in range(self.n)]
@@ -239,9 +239,9 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
         print("This is represented by the array:")
         print(self.positions)
         try:
-            level = 0 if self.k == 2 else int(input("Which level would you like to play on (0-%d)? " % self.n))
-            column = int(input("Which column would you like to play on (0-%d)? " % self.n))
-            row = int(input("Which row would you like to play on (0-%d)? " % self.n))
+            level = 0 if self.k == 2 else int(input("Which level would you like to play on (0-%d)? " % (self.n - 1)))
+            column = int(input("Which column would you like to play on (0-%d)? " % (self.n - 1)))
+            row = int(input("Which row would you like to play on (0-%d)? " % (self.n - 1)))
             choice = level * self.n ** 2 + row * self.n + column
             assert self.move_available(choice)
             assert level in range(self.n)
@@ -331,6 +331,7 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
         states = {deepcopy(self)}
         children = set()
         depth = 0
+        weights_arr = np.array(list(weights.values()))
         while states:
             depth += 1
             print("At depth: %d; active nodes: %d" % (depth, len(states)))
@@ -352,7 +353,7 @@ class Board:  # Cimpl entire class as a struct, functions as methods taking the 
                         if guide == 'human':
                             children.update({parent.human_move()})
                         elif guide == 'greedy':
-                            children.update({parent.greedy_move()})
+                            children.update({parent.greedy_move(weights_arr)})
                         elif guide == 'random':
                             children.update({parent.rand_move()})
                         elif guide == 'rl':
